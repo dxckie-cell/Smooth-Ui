@@ -1,0 +1,13 @@
+{
+	"name": "Smooth UI",
+	"description": "Cross-fades and animates layout changes across Discord",
+	"authors": [
+		{
+			"name": "dxckie cell"
+		}
+	],
+	"main": "src/index.ts",
+	"vendetta": {
+		"icon": "SettingsIcon"
+	}
+}
