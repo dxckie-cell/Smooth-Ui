@@ -62,6 +62,21 @@ export function findByFnName(wanted: string): any {
 	});
 }
 
+/** Where a named component lives, so it can be patched in place (plain, class, memo or forwardRef). */
+export function findPatchTarget(
+	wanted: string,
+): { parent: any; key: string; value: any } | undefined {
+	return scan(
+		(v, k, m) => {
+			if (nameOf(v) === wanted) return { parent: m, key: k, value: v };
+			if (v && typeof v === "object") {
+				if (nameOf(v.type) === wanted) return { parent: v, key: "type", value: v.type };
+				if (nameOf(v.render) === wanted) return { parent: v, key: "render", value: v.render };
+			}
+		},
+	);
+}
+
 /** [exportsObject, key] holding `fn`, so it can be patched in place. */
 export function findParentOf(fn: any): [any, string] | undefined {
 	return scan((v, k, m) => (v === fn ? ([m, k] as [any, string]) : undefined));

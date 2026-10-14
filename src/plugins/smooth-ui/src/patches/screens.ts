@@ -2,6 +2,7 @@ import { ReactNative as RN } from "@vendetta/metro/common";
 import { before } from "@vendetta/patcher";
 
 import type { Feature } from "../features";
+import { diag } from "../diag";
 import { findByFnName, findParentOf } from "../find";
 import { clampSpeed, config } from "../settings";
 
@@ -64,6 +65,7 @@ function animation() {
 
 /** react-navigation's JS stack (Discord's main push/pop navigator). */
 function tweakStack(descriptors: any) {
+	diag.jsCalls++;
 	if (!descriptors || typeof descriptors !== "object") return;
 	const { interpolator, spec } = animation();
 	for (const key in descriptors) {
@@ -74,11 +76,13 @@ function tweakStack(descriptors: any) {
 		if (typeof o.gestureDirection === "string" && o.gestureDirection.startsWith("vertical")) continue;
 		o.cardStyleInterpolator = interpolator;
 		o.transitionSpec = spec;
+		diag.jsChanged++;
 	}
 }
 
 /** react-native-screens based stack: only the native "fade" animation exists. */
 function tweakNative(descriptors: any) {
+	diag.nativeCalls++;
 	if (!descriptors || typeof descriptors !== "object" || config.screenStyle !== "fade") return;
 	for (const key in descriptors) {
 		const o = descriptors[key]?.options;
@@ -86,6 +90,7 @@ function tweakNative(descriptors: any) {
 		if (o.presentation && o.presentation !== "card" && o.presentation !== "push") continue;
 		o.animation = "fade";
 		o.animationDuration = clampSpeed(config.speed) + 60;
+		diag.nativeChanged++;
 	}
 }
 

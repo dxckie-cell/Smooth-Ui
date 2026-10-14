@@ -5,15 +5,11 @@ export type ScreenStyle = "fade" | "slide-fade";
 export interface Config {
 	/** settings schema version, bumped when defaults change */
 	version: number;
-	/** fade/animate whatever changes on screen right after you tap something */
-	taps: boolean;
-	/** cross-fade when switching channels / loading messages */
-	channels: boolean;
+	/** fade the chat in when you switch channels */
+	chatFade: boolean;
 	/** experimental: override Discord's screen push/pop animation */
 	screens: boolean;
-	/** also animate things moving and resizing, not only fading */
-	moves: boolean;
-	/** skip everything when the system "reduce motion" setting is on */
+	/** skip animations when the system "reduce motion" setting is on */
 	respectReduceMotion: boolean;
 	/** animation length in ms */
 	speed: number;
@@ -21,12 +17,9 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	version: 2,
-	// LayoutAnimation does nothing on the new architecture (Fabric), so these start off
-	taps: false,
-	channels: false,
+	version: 3,
+	chatFade: false,
 	screens: false,
-	moves: false,
 	respectReduceMotion: true,
 	speed: 200,
 	screenStyle: "slide-fade",
@@ -35,15 +28,15 @@ export const DEFAULTS: Config = {
 export const config = storage as unknown as Config;
 
 export function initConfig() {
-	const migrate = (config.version ?? 0) < 2;
+	const old = (config.version ?? 0) < 3;
 	for (const k of Object.keys(DEFAULTS) as (keyof Config)[]) {
 		if (config[k] === undefined) (config as any)[k] = DEFAULTS[k];
 	}
-	// v2: the LayoutAnimation based features were found not to work on Fabric
-	if (migrate) {
-		config.taps = false;
-		config.channels = false;
-		config.version = 2;
+	if (old) {
+		// v3: the LayoutAnimation features (taps, channels, moves) were removed;
+		// they have no visible effect on the new architecture
+		for (const k of ["taps", "channels", "moves"]) delete (config as any)[k];
+		config.version = 3;
 	}
 }
 

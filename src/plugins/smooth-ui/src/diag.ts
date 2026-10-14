@@ -3,8 +3,14 @@ import { ReactNative as RN } from "@vendetta/metro/common";
 
 import { describe, initializedExports, nameOf } from "./find";
 
-/** Counters filled in by layout.ts so the settings page can show what happened. */
-export const diag = { calls: 0, lastError: undefined as string | undefined };
+/** Counters filled in by the patches so the settings page can show what happened. */
+export const diag = {
+	jsCalls: 0,
+	jsChanged: 0,
+	nativeCalls: 0,
+	nativeChanged: 0,
+	fades: 0,
+};
 
 function safe(fn: () => any): string {
 	try {
@@ -27,11 +33,8 @@ export function envInfo(): string {
 			})
 		}`,
 		`Fabric: ${!!g.nativeFabricUIManager}, bridgeless: ${!!g.RN$Bridgeless}, hermes: ${!!g.HermesInternal}`,
-		`UIManager: ${safe(() => typeof RN.UIManager)}`,
-		`LayoutAnimation.configureNext: ${safe(() => typeof RN.LayoutAnimation?.configureNext)}`,
-		`configureNext calls: ${diag.calls}, last error: ${diag.lastError ?? "none"}`,
-		`Reanimated: ${safe(() => (findByProps("useSharedValue") ? "found" : "not found"))}`,
-		`Reanimated FadeIn: ${safe(() => (findByProps("FadeIn") ? "found" : "not found"))}`,
+		`Screen hooks: JS stack called ${diag.jsCalls}x (changed ${diag.jsChanged} screens), native stack called ${diag.nativeCalls}x (changed ${diag.nativeChanged})`,
+		`Chat fades played: ${diag.fades}`,
 	];
 	return lines.join("\n");
 }

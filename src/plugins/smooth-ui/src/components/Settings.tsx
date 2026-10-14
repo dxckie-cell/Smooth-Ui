@@ -9,16 +9,12 @@ import Text from "$/components/Text";
 
 import { copyText, envInfo, scanInternals } from "../diag";
 import { type FeatureId, state, sync } from "../features";
-import { animateNext } from "../layout";
-import { type Config, config, resetConfig } from "../settings";
+import { type Config, clampSpeed, config, resetConfig } from "../settings";
 
 const { FormRow, FormSwitch } = Forms as any;
 
 // a missing icon name falls back to the settings cog instead of an empty slot
 const asset = (name: string) => getAssetIDByName(name) ?? getAssetIDByName("SettingsIcon");
-
-const FABRIC = !!(globalThis as any).nativeFabricUIManager;
-const FABRIC_NOTE = FABRIC ? " Has no visible effect on this Discord (new architecture)." : "";
 
 const SPEEDS = [
 	{ label: "Fast", ms: 140 },
@@ -73,25 +69,29 @@ function statusText(id: FeatureId) {
 	return "Off";
 }
 
-/** Tap to see the current speed / movement settings on a box that appears and disappears. */
+/** Tap to fade a box in and out with the current speed (same animation as the chat fade). */
 function Preview() {
-	const [shown, setShown] = React.useState(false);
+	const opacity = React.useRef(new RN.Animated.Value(1)).current;
+	const shown = React.useRef(true);
 	return (
 		<>
 			<FormRow
 				label="Preview"
-				subLabel="Tap to show or hide a box with the current settings"
+				subLabel="Tap to fade a box out and in with the current speed"
 				leading={<FormRow.Icon source={asset("PlayIcon")} />}
 				onPress={() => {
-					animateNext(true);
-					setShown(v => !v);
+					shown.current = !shown.current;
+					RN.Animated.timing(opacity, {
+						toValue: shown.current ? 1 : 0,
+						duration: clampSpeed(config.speed) + 100,
+						easing: RN.Easing.out(RN.Easing.cubic),
+						useNativeDriver: true,
+					}).start();
 				}}
 			/>
-			{shown && (
-				<RN.View style={styles.demo}>
-					<Text variant="text-md/semibold" color="TEXT_DEFAULT">Smooth</Text>
-				</RN.View>
-			)}
+			<RN.Animated.View style={[styles.demo, { opacity }]}>
+				<Text variant="text-md/semibold" color="TEXT_DEFAULT">Smooth</Text>
+			</RN.Animated.View>
 		</>
 	);
 }
@@ -138,25 +138,11 @@ export default () => {
 		<RN.ScrollView>
 			<BetterTableRowGroup title="Animations" icon={asset("SettingsIcon")}>
 				<SwitchRow
-					label="Tap animations"
-					sub={"Content that appears or disappears after a tap fades in and out." + FABRIC_NOTE}
-					icon="HandRequestSpeakIcon"
-					value={config.taps}
-					onChange={v => set("taps", v)}
-				/>
-				<SwitchRow
-					label="Channel switch fade"
-					sub={"Cross-fade the chat when you open another channel." + FABRIC_NOTE}
+					label="Channel fade"
+					sub="Fade the chat in when you open another channel"
 					icon="ChatIcon"
-					value={config.channels}
-					onChange={v => set("channels", v)}
-				/>
-				<SwitchRow
-					label="Move animations"
-					sub="Also animate things sliding and resizing, not just fading. Can look odd in message lists"
-					icon="ArrowsUpDownIcon"
-					value={config.moves}
-					onChange={v => set("moves", v)}
+					value={config.chatFade}
+					onChange={v => set("chatFade", v)}
 				/>
 				<FormRow
 					label="Speed"
@@ -171,7 +157,7 @@ export default () => {
 			<BetterTableRowGroup title="Experimental" icon={asset("SettingsIcon")}>
 				<SwitchRow
 					label="Screen transitions"
-					sub="Replace the animation when opening and closing screens"
+					sub="Replace the animation when opening and closing pages"
 					icon="ArrowAngleRightUpIcon"
 					value={config.screens}
 					onChange={v => set("screens", v)}
@@ -199,8 +185,7 @@ export default () => {
 			</BetterTableRowGroup>
 
 			<BetterTableRowGroup title="Status" icon={asset("InfoIcon")}>
-				<FormRow label="Tap animations" subLabel={statusText("taps")} />
-				<FormRow label="Channel switch fade" subLabel={statusText("channels")} />
+				<FormRow label="Channel fade" subLabel={statusText("chatFade")} />
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<Scan />

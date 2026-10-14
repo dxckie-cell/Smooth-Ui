@@ -1,10 +1,10 @@
 import Settings from "./components/Settings";
 import { stopAll, sync } from "./features";
-import { startLayout } from "./layout";
+import { startMotion } from "./motion";
 import { initConfig } from "./settings";
 
 initConfig();
-const stopLayout = startLayout();
+const stopLayout = startMotion();
 sync();
 
 export function onLoad() {
