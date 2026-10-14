@@ -80,9 +80,8 @@ function tweakStack(descriptors: any) {
 	}
 }
 
-/** react-native-screens based stack: only the native "fade" animation exists. */
-function tweakNative(descriptors: any) {
-	diag.nativeCalls++;
+/** Remembers each native stack route's name with the presentation / animation Discord gave it. */
+export function recordRoutes(descriptors: any) {
 	if (!descriptors || typeof descriptors !== "object") return;
 	for (const key in descriptors) {
 		const name = descriptors[key]?.route?.name;
@@ -91,6 +90,13 @@ function tweakNative(descriptors: any) {
 			diag.routes.set(name, `${o.presentation ?? "card"}/${o.animation ?? "default"}`);
 		}
 	}
+}
+
+/** react-native-screens based stack: only the native "fade" animation exists. */
+function tweakNative(descriptors: any) {
+	diag.nativeCalls++;
+	if (!descriptors || typeof descriptors !== "object") return;
+	recordRoutes(descriptors);
 	if (config.screenStyle !== "fade") return;
 	for (const key in descriptors) {
 		const o = descriptors[key]?.options;
