@@ -7,6 +7,7 @@ import { Forms } from "@vendetta/ui/components";
 import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
+import { envInfo } from "../diag";
 import { type FeatureId, state, sync } from "../features";
 import { animateNext } from "../layout";
 import { type Config, config, resetConfig } from "../settings";
@@ -175,6 +176,7 @@ export default () => {
 				<FormRow label="Tap animations" subLabel={statusText("taps")} />
 				<FormRow label="Channel switch fade" subLabel={statusText("channels")} />
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
+				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<FormRow
 					label={
 						<Text variant="text-md/semibold" color="TEXT_FEEDBACK_CRITICAL">

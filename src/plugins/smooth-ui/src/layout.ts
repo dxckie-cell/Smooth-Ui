@@ -1,5 +1,6 @@
 import { ReactNative as RN } from "@vendetta/metro/common";
 
+import { diag } from "./diag";
 import { clampSpeed, config } from "./settings";
 
 let reduceMotion = false;
@@ -41,11 +42,14 @@ export function animateNext(force = false) {
 	}
 
 	try {
+		diag.calls++;
 		RN.LayoutAnimation.configureNext({
 			duration: clampSpeed(config.speed),
 			create: { type: "easeInEaseOut", property: "opacity" },
 			delete: { type: "easeInEaseOut", property: "opacity" },
 			...(config.moves ? { update: { type: "easeInEaseOut" } } : {}),
 		});
-	} catch {}
+	} catch (e: any) {
+		diag.lastError = String(e?.message ?? e);
+	}
 }
