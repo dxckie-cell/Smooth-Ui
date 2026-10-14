@@ -83,7 +83,15 @@ function tweakStack(descriptors: any) {
 /** react-native-screens based stack: only the native "fade" animation exists. */
 function tweakNative(descriptors: any) {
 	diag.nativeCalls++;
-	if (!descriptors || typeof descriptors !== "object" || config.screenStyle !== "fade") return;
+	if (!descriptors || typeof descriptors !== "object") return;
+	for (const key in descriptors) {
+		const name = descriptors[key]?.route?.name;
+		const o = descriptors[key]?.options;
+		if (typeof name === "string" && o && !diag.routes.has(name) && diag.routes.size < 60) {
+			diag.routes.set(name, `${o.presentation ?? "card"}/${o.animation ?? "default"}`);
+		}
+	}
+	if (config.screenStyle !== "fade") return;
 	for (const key in descriptors) {
 		const o = descriptors[key]?.options;
 		if (!o || typeof o !== "object") continue;

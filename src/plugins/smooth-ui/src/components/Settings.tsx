@@ -7,7 +7,7 @@ import { Forms } from "@vendetta/ui/components";
 import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
-import { copyText, envInfo, scanInternals } from "../diag";
+import { capturing, copyText, envInfo, eventsText, scanInternals, toggleCapture } from "../diag";
 import { type FeatureId, state, sync } from "../features";
 import { type Config, clampSpeed, config, resetConfig } from "../settings";
 
@@ -118,6 +118,27 @@ function Scan() {
 	);
 }
 
+function Capture() {
+	const [text, setText] = React.useState(
+		"Tap to start recording Discord's events. Switch channels, come back here and tap again to see what fired",
+	);
+	return (
+		<FormRow
+			label={capturing() ? "Stop recording and show events" : "Record Discord events"}
+			subLabel={text}
+			leading={<FormRow.Icon source={asset("ClockIcon")} />}
+			onPress={() => {
+				toggleCapture();
+				if (capturing()) setText("Recording... switch channels now, then come back and tap again");
+				else {
+					const out = eventsText();
+					setText(`${out}\n\n${copyText(out) ? "(copied to clipboard)" : "(couldn't copy)"}`);
+				}
+			}}
+		/>
+	);
+}
+
 export default () => {
 	useProxy(config);
 	const [, refresh] = React.useReducer((x: number) => x + 1, 0);
@@ -174,6 +195,16 @@ export default () => {
 				/>
 			</BetterTableRowGroup>
 
+			<BetterTableRowGroup title="Debug" icon={asset("SettingsIcon")}>
+				<SwitchRow
+					label="Outline faded area"
+					sub="Draws a red outline around the chat area that Channel fade controls, to check it is on screen"
+					icon="EyeIcon"
+					value={config.debugBorder}
+					onChange={v => set("debugBorder", v)}
+				/>
+			</BetterTableRowGroup>
+
 			<BetterTableRowGroup title="Accessibility" icon={asset("SettingsIcon")}>
 				<SwitchRow
 					label="Respect reduce motion"
@@ -189,6 +220,7 @@ export default () => {
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<Scan />
+				<Capture />
 				<FormRow
 					label={
 						<Text variant="text-md/semibold" color="TEXT_FEEDBACK_CRITICAL">

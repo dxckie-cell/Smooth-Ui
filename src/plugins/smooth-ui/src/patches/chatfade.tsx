@@ -27,8 +27,14 @@ export function fadeNow() {
 }
 
 function Fade({ children }: { children?: any }) {
+	diag.fadeRenders++;
 	return (
-		<RN.Animated.View style={{ flex: 1, opacity: getOpacity() }}>
+		<RN.Animated.View
+			style={[
+				{ flex: 1, opacity: getOpacity() },
+				config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" },
+			]}
+		>
 			{children}
 		</RN.Animated.View>
 	);

@@ -1,5 +1,6 @@
 import { findByProps } from "@vendetta/metro";
-import { ReactNative as RN } from "@vendetta/metro/common";
+import { FluxDispatcher, ReactNative as RN } from "@vendetta/metro/common";
+import { before } from "@vendetta/patcher";
 
 import { describe, initializedExports, nameOf } from "./find";
 
@@ -10,7 +11,44 @@ export const diag = {
 	nativeCalls: 0,
 	nativeChanged: 0,
 	fades: 0,
+	fadeRenders: 0,
+	/** route name -> "presentation/animation" Discord gave it, for native stack screens seen */
+	routes: new Map<string, string>(),
+	/** Flux event type -> count, most recent last (only filled while capturing) */
+	events: new Map<string, number>(),
 };
+
+let stopCapture: (() => void) | undefined;
+export const capturing = () => !!stopCapture;
+
+/** Starts or stops recording the types of Flux events Discord dispatches. */
+export function toggleCapture() {
+	if (stopCapture) {
+		stopCapture();
+		stopCapture = undefined;
+		return;
+	}
+	diag.events.clear();
+	stopCapture = before("dispatch", FluxDispatcher as any, (args: any[]) => {
+		const type = args[0]?.type;
+		if (typeof type !== "string") return;
+		const n = diag.events.get(type) ?? 0;
+		diag.events.delete(type); // re-insert so the newest event is last
+		diag.events.set(type, n + 1);
+	});
+}
+
+export function stopCapturing() {
+	try {
+		stopCapture?.();
+	} catch {}
+	stopCapture = undefined;
+}
+
+export function eventsText(): string {
+	const list = [...diag.events.entries()].slice(-40).map(([t, n]) => `${t}${n > 1 ? ` x${n}` : ""}`);
+	return list.length ? `${diag.events.size} event types, newest last:\n${list.join("\n")}` : "No events recorded";
+}
 
 function safe(fn: () => any): string {
 	try {
@@ -34,7 +72,10 @@ export function envInfo(): string {
 		}`,
 		`Fabric: ${!!g.nativeFabricUIManager}, bridgeless: ${!!g.RN$Bridgeless}, hermes: ${!!g.HermesInternal}`,
 		`Screen hooks: JS stack called ${diag.jsCalls}x (changed ${diag.jsChanged} screens), native stack called ${diag.nativeCalls}x (changed ${diag.nativeChanged})`,
-		`Chat fades played: ${diag.fades}`,
+		`Chat fades played: ${diag.fades}, wrapper rendered ${diag.fadeRenders}x`,
+		`Native routes seen (${diag.routes.size}): ${
+			[...diag.routes.entries()].slice(-20).map(([n, v]) => `${n} [${v}]`).join(", ") || "none"
+		}`,
 	];
 	return lines.join("\n");
 }

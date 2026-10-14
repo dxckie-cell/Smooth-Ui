@@ -14,6 +14,8 @@ export interface Config {
 	/** animation length in ms */
 	speed: number;
 	screenStyle: ScreenStyle;
+	/** debug: draw a red outline around the area the channel fade controls */
+	debugBorder: boolean;
 }
 
 export const DEFAULTS: Config = {
@@ -24,6 +26,7 @@ export const DEFAULTS: Config = {
 	speed: 200,
 	// Discord uses native stacks, which only support fade
 	screenStyle: "fade",
+	debugBorder: false,
 };
 
 export const config = storage as unknown as Config;
