@@ -164,7 +164,7 @@ export default () => {
 				/>
 				<FormRow
 					label="Transition style"
-					subLabel={`${styleLabel}. Tap to change. Native stacks only support Fade`}
+					subLabel={`${styleLabel}. Tap to change. Slide + fade only works on Discord's JS stack; native stacks (what your Discord uses) only support Fade`}
 					leading={<FormRow.Icon source={asset("PaintPaletteIcon")} />}
 					trailing={<FormRow.Arrow />}
 					onPress={() => {

@@ -17,27 +17,30 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	version: 3,
+	version: 4,
 	chatFade: false,
 	screens: false,
 	respectReduceMotion: true,
 	speed: 200,
-	screenStyle: "slide-fade",
+	// Discord uses native stacks, which only support fade
+	screenStyle: "fade",
 };
 
 export const config = storage as unknown as Config;
 
 export function initConfig() {
-	const old = (config.version ?? 0) < 3;
+	const from = config.version ?? 0;
 	for (const k of Object.keys(DEFAULTS) as (keyof Config)[]) {
 		if (config[k] === undefined) (config as any)[k] = DEFAULTS[k];
 	}
-	if (old) {
+	if (from < 3) {
 		// v3: the LayoutAnimation features (taps, channels, moves) were removed;
 		// they have no visible effect on the new architecture
 		for (const k of ["taps", "channels", "moves"]) delete (config as any)[k];
-		config.version = 3;
 	}
+	// v4: Discord's pages use native stacks, where only fade works
+	if (from < 4) config.screenStyle = "fade";
+	config.version = DEFAULTS.version;
 }
 
 export function resetConfig() {
