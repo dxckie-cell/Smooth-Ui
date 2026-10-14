@@ -4,8 +4,8 @@ A [Revenge](https://github.com/revenge-mod) plugin for Discord mobile that makes
 
 ## Features
 
-- **Tap animations:** whatever changes on screen right after you tap something (a panel opening, a list swapping, a row expanding) fades in and out. It hooks `Pressable`, `TouchableOpacity` and `TouchableHighlight`, so it covers most of Discord's buttons and rows.
-- **Channel switch fade:** cross-fades the chat when you open a channel and when its messages arrive.
+- **Tap animations (no effect on new-architecture Discord):** whatever changes on screen right after you tap something (a panel opening, a list swapping, a row expanding) fades in and out. It hooks `Pressable`, `TouchableOpacity` and `TouchableHighlight`, so it covers most of Discord's buttons and rows.
+- **Channel switch fade (no effect on new-architecture Discord):** cross-fades the chat when you open a channel and when its messages arrive.
 - **Move animations (off by default):** also animates things sliding and resizing, not only fading. It can look odd in message lists, so try it and see.
 - **Speed:** Fast, Normal, Smooth or Slow. The **Preview** row shows a box appearing and disappearing with your current settings.
 - **Screen transitions (experimental, off by default):** replaces the animation when opening and closing screens with a fade or slide + fade. It depends on Discord's navigation internals, so check the **Status** section to see whether it found them. On native stacks only Fade works.

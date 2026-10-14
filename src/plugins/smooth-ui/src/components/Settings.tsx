@@ -7,7 +7,7 @@ import { Forms } from "@vendetta/ui/components";
 import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
-import { envInfo } from "../diag";
+import { envInfo, scanInternals } from "../diag";
 import { type FeatureId, state, sync } from "../features";
 import { animateNext } from "../layout";
 import { type Config, config, resetConfig } from "../settings";
@@ -16,6 +16,9 @@ const { FormRow, FormSwitch } = Forms as any;
 
 // a missing icon name falls back to the settings cog instead of an empty slot
 const asset = (name: string) => getAssetIDByName(name) ?? getAssetIDByName("SettingsIcon");
+
+const FABRIC = !!(globalThis as any).nativeFabricUIManager;
+const FABRIC_NOTE = FABRIC ? " Has no visible effect on this Discord (new architecture)." : "";
 
 const SPEEDS = [
 	{ label: "Fast", ms: 140 },
@@ -92,6 +95,27 @@ function Preview() {
 	);
 }
 
+function Scan() {
+	const [text, setText] = React.useState("Tap to look for Discord's navigation and chat components (takes a few seconds)");
+	return (
+		<FormRow
+			label="Scan Discord internals"
+			subLabel={text}
+			leading={<FormRow.Icon source={asset("MagnifyingGlassIcon")} />}
+			onPress={() => {
+				setText("Scanning...");
+				setTimeout(() => {
+					try {
+						setText(scanInternals());
+					} catch (e: any) {
+						setText(`Scan failed: ${e?.message ?? e}`);
+					}
+				}, 100);
+			}}
+		/>
+	);
+}
+
 export default () => {
 	useProxy(config);
 	const [, refresh] = React.useReducer((x: number) => x + 1, 0);
@@ -113,14 +137,14 @@ export default () => {
 			<BetterTableRowGroup title="Animations" icon={asset("SettingsIcon")}>
 				<SwitchRow
 					label="Tap animations"
-					sub="Content that appears or disappears after a tap fades in and out"
+					sub={"Content that appears or disappears after a tap fades in and out." + FABRIC_NOTE}
 					icon="HandRequestSpeakIcon"
 					value={config.taps}
 					onChange={v => set("taps", v)}
 				/>
 				<SwitchRow
 					label="Channel switch fade"
-					sub="Cross-fade the chat when you open another channel"
+					sub={"Cross-fade the chat when you open another channel." + FABRIC_NOTE}
 					icon="ChatIcon"
 					value={config.channels}
 					onChange={v => set("channels", v)}
@@ -177,6 +201,7 @@ export default () => {
 				<FormRow label="Channel switch fade" subLabel={statusText("channels")} />
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
+				<Scan />
 				<FormRow
 					label={
 						<Text variant="text-md/semibold" color="TEXT_FEEDBACK_CRITICAL">

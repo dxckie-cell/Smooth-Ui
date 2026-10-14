@@ -3,6 +3,8 @@ import { storage } from "@vendetta/plugin";
 export type ScreenStyle = "fade" | "slide-fade";
 
 export interface Config {
+	/** settings schema version, bumped when defaults change */
+	version: number;
 	/** fade/animate whatever changes on screen right after you tap something */
 	taps: boolean;
 	/** cross-fade when switching channels / loading messages */
@@ -19,8 +21,10 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	taps: true,
-	channels: true,
+	version: 2,
+	// LayoutAnimation does nothing on the new architecture (Fabric), so these start off
+	taps: false,
+	channels: false,
 	screens: false,
 	moves: false,
 	respectReduceMotion: true,
@@ -31,8 +35,15 @@ export const DEFAULTS: Config = {
 export const config = storage as unknown as Config;
 
 export function initConfig() {
+	const migrate = (config.version ?? 0) < 2;
 	for (const k of Object.keys(DEFAULTS) as (keyof Config)[]) {
 		if (config[k] === undefined) (config as any)[k] = DEFAULTS[k];
+	}
+	// v2: the LayoutAnimation based features were found not to work on Fabric
+	if (migrate) {
+		config.taps = false;
+		config.channels = false;
+		config.version = 2;
 	}
 }
 
