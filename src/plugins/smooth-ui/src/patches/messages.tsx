@@ -7,10 +7,9 @@ import { describe, findPatchTarget } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
-// MessagesItemChannelContent turned out to be the channel *list* row. These are guesses at the
-// real message row; a component only animates when its props carry a message id, so a wrong
-// guess is harmless.
-const TARGETS = ["ChatViewMessage", "ChatMessage", "MessageItem", "MessageRow", "MessageContainer", "Message"];
+// Candidates for the real chat message row, taken from the scan of this Discord build.
+// A component only animates when its props carry a message id, so wrong guesses are harmless.
+const TARGETS = ["MessageRow", "MessageRowWrapper", "MessageRowContent", "ChatMessage", "MessageItem"];
 
 /** ids / nonces of messages that just arrived and haven't animated yet */
 const fresh = new Set<string>();
@@ -20,11 +19,24 @@ const remember = (id: unknown) => {
 	if (fresh.size > 60) fresh.delete(fresh.values().next().value as string);
 };
 
-/** The message id behind a list row, wherever this Discord build keeps it. */
+/** The message id behind a list row: looks for a message-shaped object in the props (two levels). */
 function idsOf(props: any): string[] {
-	const m = props?.message ?? props?.item?.message ?? props?.messageRecord;
-	return [m?.id, m?.nonce, props?.messageId, props?.id, props?.item?.id]
-		.filter((x): x is string => typeof x === "string");
+	const out: string[] = [];
+	const take = (m: any) => {
+		if (m && typeof m === "object" && typeof m.id === "string" && (m.channel_id || m.channelId || m.author)) {
+			out.push(m.id);
+			if (typeof m.nonce === "string") out.push(m.nonce);
+			return true;
+		}
+		return false;
+	};
+	if (!props || typeof props !== "object") return out;
+	for (const k of Object.keys(props)) {
+		const v = props[k];
+		if (take(v) || !v || typeof v !== "object") continue;
+		for (const k2 of ["message", "messageRecord", "rowData"]) take(v[k2]);
+	}
+	return out;
 }
 
 function Pop({ children, ids }: { children?: any; ids: string[] }) {
@@ -69,11 +81,15 @@ const messagePop: Feature = () => {
 	}
 	const stops: (() => void)[] = [];
 	const hooked: string[] = [];
-	const wrap = function(args: any[], ret: any) {
+	const sampled = new Set<string>();
+	const mk = (name: string) => (args: any[], ret: any) => {
 		if (ret == null || ret === false) return ret;
 		const ids = idsOf(args[0]);
+		if (!sampled.has(name)) {
+			sampled.add(name);
+			diag.messageSample += `${name}(${ids.length ? "msg" : "no msg"}: ${Object.keys(args[0] ?? {}).slice(0, 8).join(",")}) `;
+		}
 		if (!ids.length) return ret;
-		diag.messageSample = Object.keys(args[0] ?? {}).slice(0, 12).join(",");
 		return React.createElement(Pop, { ids }, ret);
 	};
 	for (const name of TARGETS) {
@@ -83,10 +99,10 @@ const messagePop: Feature = () => {
 		hooked.push(describe(value));
 		if (typeof value === "function" && value.prototype?.isReactComponent) {
 			stops.push(after("render", value.prototype, function(this: any, _a: any[], r: any) {
-				return wrap([this.props], r);
+				return mk(name)([this.props], r);
 			}));
 		} else {
-			stops.push(after(key, parent, wrap));
+			stops.push(after(key, parent, mk(name)));
 		}
 	}
 	if (!hooked.length) throw new Error(`Couldn't find any of: ${TARGETS.join(", ")}`);
