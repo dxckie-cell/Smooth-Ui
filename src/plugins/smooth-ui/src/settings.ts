@@ -55,5 +55,5 @@ export function resetConfig() {
 
 export function clampSpeed(ms: unknown) {
 	const n = Number(ms);
-	return Math.max(80, Math.min(600, Number.isFinite(n) && n > 0 ? n : DEFAULTS.speed));
+	return Math.max(80, Math.min(1200, Number.isFinite(n) && n > 0 ? n : DEFAULTS.speed));
 }

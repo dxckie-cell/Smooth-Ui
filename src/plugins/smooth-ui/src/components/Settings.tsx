@@ -25,6 +25,7 @@ const SPEEDS = [
 	{ label: "Normal", ms: 200 },
 	{ label: "Smooth", ms: 280 },
 	{ label: "Slow", ms: 380 },
+	{ label: "Test (very slow)", ms: 1000 },
 ];
 const STYLES: { value: Config["screenStyle"]; label: string }[] = [
 	{ value: "slide-fade", label: "Slide + fade" },
