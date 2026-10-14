@@ -1,31 +1,11 @@
-import { find } from "@vendetta/metro";
 import { ReactNative as RN } from "@vendetta/metro/common";
 import { before } from "@vendetta/patcher";
 
 import type { Feature } from "../features";
+import { findByFnName, findParentOf } from "../find";
 import { clampSpeed, config } from "../settings";
 
 const SLIDE = 24;
-
-const nameOf = (v: any) => (typeof v === "function" ? v.displayName ?? v.name : undefined);
-
-/** Finds a component by function/class name among every module's exports. */
-function findComponent(wanted: string): any {
-	let hit: any;
-	find((m: any) => {
-		if (hit || !m || (typeof m !== "object" && typeof m !== "function")) return false;
-		try {
-			for (const k of Object.keys(m)) {
-				const v = m[k];
-				if (nameOf(v) === wanted) hit = v;
-				else if (v && typeof v === "object" && nameOf(v.type) === wanted) hit = v.type;
-				if (hit) return true;
-			}
-		} catch {}
-		return false;
-	});
-	return hit;
-}
 
 // rebuilt only when the style / speed setting changes
 let cached: { key: string; interpolator: any; spec: any } | undefined;
@@ -114,7 +94,7 @@ const screens: Feature = () => {
 	const stops: (() => void)[] = [];
 	const found: string[] = [];
 
-	const cardStack = findComponent("CardStack");
+	const cardStack = findByFnName("CardStack");
 	if (cardStack && typeof cardStack.getDerivedStateFromProps === "function") {
 		stops.push(before("getDerivedStateFromProps", cardStack, (args: any[]) => {
 			try {
@@ -124,10 +104,10 @@ const screens: Feature = () => {
 		found.push("JS stack");
 	}
 
-	const nativeStack = findComponent("NativeStackView");
+	const nativeStack = findByFnName("NativeStackView");
 	if (nativeStack) {
 		// a function component: patch it where it lives
-		const parent = findParent(nativeStack);
+		const parent = findParentOf(nativeStack);
 		if (parent) {
 			stops.push(before(parent[1], parent[0], (args: any[]) => {
 				try {
@@ -143,23 +123,5 @@ const screens: Feature = () => {
 	}
 	return { stop: () => stops.forEach(s => s()), detail: `Hooked ${found.join(" + ")}` };
 };
-
-/** [exportsObject, key] holding `fn`, so it can be patched in place. */
-function findParent(fn: any): [any, string] | undefined {
-	let hit: [any, string] | undefined;
-	find((m: any) => {
-		if (hit || !m || (typeof m !== "object" && typeof m !== "function")) return false;
-		try {
-			for (const k of Object.keys(m)) {
-				if (m[k] === fn) {
-					hit = [m, k];
-					return true;
-				}
-			}
-		} catch {}
-		return false;
-	});
-	return hit;
-}
 
 export default screens;
