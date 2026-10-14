@@ -1,7 +1,7 @@
-import { find, findByProps } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
 import { ReactNative as RN } from "@vendetta/metro/common";
 
-import { describe, nameOf } from "./find";
+import { describe, initializedExports, nameOf } from "./find";
 
 /** Counters filled in by layout.ts so the settings page can show what happened. */
 export const diag = { calls: 0, lastError: undefined as string | undefined };
@@ -37,34 +37,53 @@ export function envInfo(): string {
 }
 
 const WANTED = ["CardStack", "StackView", "NativeStackView", "Pressability"];
+const NAV = /(Stack|Navigator|Transition|Animat|Fade|Screen)/;
+const CHAT = /^(Chat|Channel|Message|Guild|Sidebar|Tab|Drawer)/;
 
-/**
- * Walks every module once (slow, so only on demand) and reports the navigation
- * pieces Discord has plus the names of its chat / channel components.
- */
+const fnNames = (v: any): string[] => {
+	const names = [nameOf(v), nameOf(v?.type), nameOf(v?.render)].filter(Boolean) as string[];
+	return names;
+};
+
+/** Reads the already-loaded modules (no search cache) and lists navigation / chat components. */
 export function scanInternals(): string {
 	const found = new Map<string, string>();
-	const candidates = new Set<string>();
+	const nav = new Set<string>();
+	const chat = new Set<string>();
+	const mods = initializedExports();
 
-	find((m: any) => {
-		if (!m || (typeof m !== "object" && typeof m !== "function")) return false;
+	for (const m of mods) {
 		try {
 			for (const k of Object.keys(m)) {
 				const v = m[k];
-				if (!v) continue;
-				const name = nameOf(v) ?? nameOf(v.type) ?? nameOf(v.render);
-				if (!name) continue;
-				if (WANTED.includes(name) && !found.has(name)) found.set(name, describe(v));
-				else if (
-					/^(Chat|Channel|Message|Text)/.test(name)
-					&& /(Screen|Chat|List|View|Container|Page)$/.test(name)
-				) candidates.add(name);
+				if (!v || (typeof v !== "function" && typeof v !== "object")) continue;
+				for (const name of fnNames(v)) {
+					if (WANTED.includes(name) && !found.has(name)) found.set(name, describe(v));
+					else if (NAV.test(name) && name.length < 40) nav.add(name);
+					else if (CHAT.test(name) && name.length < 40) chat.add(name);
+				}
+				if (typeof v === "function" && /^create\w*(Stack|Navigator)\w*$/.test(k)) nav.add(`${k}()`);
 			}
 		} catch {}
-		return false;
-	});
+	}
 
-	const lines = WANTED.map(n => `${n}: ${found.get(n) ?? "not found"}`);
-	lines.push(`Chat-like components (${candidates.size}): ${[...candidates].slice(0, 40).join(", ") || "none"}`);
-	return lines.join("\n");
+	const list = (set: Set<string>) => [...set].sort().slice(0, 60).join(", ") || "none";
+	return [
+		`Modules read: ${mods.length}`,
+		...WANTED.map(n => `${n}: ${found.get(n) ?? "not found"}`),
+		`Navigation-like (${nav.size}): ${list(nav)}`,
+		`Chat-like (${chat.size}): ${list(chat)}`,
+	].join("\n");
+}
+
+/** Copies text with Discord's own clipboard module; returns whether it worked. */
+export function copyText(text: string): boolean {
+	try {
+		const c: any = findByProps("setString");
+		if (typeof c?.setString !== "function") return false;
+		c.setString(text);
+		return true;
+	} catch {
+		return false;
+	}
 }

@@ -7,7 +7,7 @@ import { Forms } from "@vendetta/ui/components";
 import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
-import { envInfo, scanInternals } from "../diag";
+import { copyText, envInfo, scanInternals } from "../diag";
 import { type FeatureId, state, sync } from "../features";
 import { animateNext } from "../layout";
 import { type Config, config, resetConfig } from "../settings";
@@ -107,7 +107,8 @@ function Scan() {
 				setText("Scanning...");
 				setTimeout(() => {
 					try {
-						setText(scanInternals());
+						const out = scanInternals();
+						setText(`${out}\n\n${copyText(out) ? "(copied to clipboard)" : "(couldn't copy)"}`);
 					} catch (e: any) {
 						setText(`Scan failed: ${e?.message ?? e}`);
 					}

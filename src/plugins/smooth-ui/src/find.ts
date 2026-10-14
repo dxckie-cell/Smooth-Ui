@@ -3,21 +3,53 @@ import { find } from "@vendetta/metro";
 export const nameOf = (v: any): string | undefined =>
 	typeof v === "function" ? v.displayName ?? v.name : undefined;
 
-/** Walks every module's exports until `pick` returns something. */
+/** Exports of every module that is already initialized (no side effects, no search cache). */
+export function initializedExports(): any[] {
+	const out: any[] = [];
+	const mods = (globalThis as any).modules;
+	if (!mods) return out;
+	for (const id in mods) {
+		try {
+			const m = mods[id];
+			if (!m?.isInitialized || m.hasError) continue;
+			const e = m.publicModule?.exports;
+			if (e && (typeof e === "object" || typeof e === "function")) out.push(e);
+		} catch {}
+	}
+	return out;
+}
+
+function scanExports<T>(
+	m: any,
+	pick: (value: any, key: string, mod: any) => T | undefined,
+): T | undefined {
+	for (const k of Object.keys(m)) {
+		const r = pick(m[k], k, m);
+		if (r !== undefined) return r;
+	}
+}
+
+/**
+ * Walks module exports until `pick` returns something. Revenge's `find` caches
+ * results per filter and all my anonymous filters share one cache key, so a
+ * miss can poison later lookups; the direct pass over initialized modules comes
+ * first and doesn't have that problem.
+ */
 function scan<T>(pick: (value: any, key: string, mod: any) => T | undefined): T | undefined {
+	for (const m of initializedExports()) {
+		try {
+			const r = scanExports(m, pick);
+			if (r !== undefined) return r;
+		} catch {}
+	}
+
 	let hit: T | undefined;
 	find((m: any) => {
 		if (hit !== undefined || !m || (typeof m !== "object" && typeof m !== "function")) return false;
 		try {
-			for (const k of Object.keys(m)) {
-				const r = pick(m[k], k, m);
-				if (r !== undefined) {
-					hit = r;
-					return true;
-				}
-			}
+			hit = scanExports(m, pick);
 		} catch {}
-		return false;
+		return hit !== undefined;
 	});
 	return hit;
 }
