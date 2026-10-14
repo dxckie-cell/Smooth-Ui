@@ -7,6 +7,8 @@ export interface Config {
 	version: number;
 	/** fade the chat in when you switch channels */
 	chatFade: boolean;
+	/** new messages ease in instead of popping in */
+	messagePop: boolean;
 	/** experimental: override Discord's screen push/pop animation */
 	screens: boolean;
 	/** skip animations when the system "reduce motion" setting is on */
@@ -19,8 +21,9 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	version: 4,
+	version: 5,
 	chatFade: false,
+	messagePop: false,
 	screens: false,
 	respectReduceMotion: true,
 	speed: 200,
@@ -54,5 +57,5 @@ export function resetConfig() {
 
 export function clampSpeed(ms: unknown) {
 	const n = Number(ms);
-	return Math.max(80, Math.min(1200, Number.isFinite(n) && n > 0 ? n : DEFAULTS.speed));
+	return Math.max(80, Math.min(3000, Number.isFinite(n) && n > 0 ? n : DEFAULTS.speed));
 }

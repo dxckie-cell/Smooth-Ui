@@ -22,6 +22,7 @@ const SPEEDS = [
 	{ label: "Smooth", ms: 280 },
 	{ label: "Slow", ms: 380 },
 	{ label: "Test (very slow)", ms: 1000 },
+	{ label: "Extra slow", ms: 2000 },
 ];
 const STYLES: { value: Config["screenStyle"]; label: string }[] = [
 	{ value: "slide-fade", label: "Slide + fade" },
@@ -165,6 +166,13 @@ export default () => {
 					value={config.chatFade}
 					onChange={v => set("chatFade", v)}
 				/>
+				<SwitchRow
+					label="New message animation"
+					sub="Messages you send or receive ease in (slide up and fade) instead of popping in. Lasts at most 0.6 s"
+					icon="ChatIcon"
+					value={config.messagePop}
+					onChange={v => set("messagePop", v)}
+				/>
 				<FormRow
 					label="Speed"
 					subLabel={`${SPEEDS[speedIdx].label} (${SPEEDS[speedIdx].ms} ms). Tap to change`}
@@ -217,6 +225,7 @@ export default () => {
 
 			<BetterTableRowGroup title="Status" icon={asset("InfoIcon")}>
 				<FormRow label="Channel fade" subLabel={statusText("chatFade")} />
+				<FormRow label="New message animation" subLabel={statusText("messagePop")} />
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<Scan />

@@ -1,11 +1,12 @@
 import chatFade from "./patches/chatfade";
+import messagePop from "./patches/messages";
 import screens from "./patches/screens";
 import { config } from "./settings";
 
 /** Starts a feature. Throws if Discord's internals aren't what it expects. */
 export type Feature = () => { stop: () => void; detail?: string };
 
-export type FeatureId = "chatFade" | "screens";
+export type FeatureId = "chatFade" | "messagePop" | "screens";
 
 export interface FeatureState {
 	on: boolean;
@@ -13,10 +14,11 @@ export interface FeatureState {
 	detail?: string;
 }
 
-const FEATURES: Record<FeatureId, Feature> = { chatFade, screens };
+const FEATURES: Record<FeatureId, Feature> = { chatFade, messagePop, screens };
 
 export const state: Record<FeatureId, FeatureState> = {
 	chatFade: { on: false },
+	messagePop: { on: false },
 	screens: { on: false },
 };
 

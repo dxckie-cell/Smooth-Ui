@@ -12,6 +12,8 @@ export const diag = {
 	nativeChanged: 0,
 	fades: 0,
 	fadeRenders: 0,
+	messagePops: 0,
+	messageSample: "",
 	/** route name -> "presentation/animation" Discord gave it, for native stack screens seen */
 	routes: new Map<string, string>(),
 	/** Flux event type -> count, most recent last (only filled while capturing) */
@@ -73,6 +75,7 @@ export function envInfo(): string {
 		`Fabric: ${!!g.nativeFabricUIManager}, bridgeless: ${!!g.RN$Bridgeless}, hermes: ${!!g.HermesInternal}`,
 		`Screen hooks: JS stack called ${diag.jsCalls}x (changed ${diag.jsChanged} screens), native stack called ${diag.nativeCalls}x (changed ${diag.nativeChanged})`,
 		`Chat fades played: ${diag.fades}, wrapper rendered ${diag.fadeRenders}x`,
+		`Message pops played: ${diag.messagePops}, message row props: ${diag.messageSample || "not rendered yet"}`,
 		`Native routes seen (${diag.routes.size}): ${
 			[...diag.routes.entries()].slice(-20).map(([n, v]) => `${n} [${v}]`).join(", ") || "none"
 		}`,
