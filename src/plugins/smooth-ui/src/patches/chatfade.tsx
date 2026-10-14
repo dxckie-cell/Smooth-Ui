@@ -7,6 +7,8 @@ import { describe, findPatchTarget } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
+const TARGETS = ["ChatView", "ChannelMessages"];
+
 // one chat is on screen at a time, so a single shared value drives the fade
 let opacity: any;
 const getOpacity = () => (opacity ??= new RN.Animated.Value(1));
@@ -49,8 +51,15 @@ const chatFade: Feature = () => {
 	if (typeof (FluxDispatcher as any)?.dispatch !== "function") {
 		throw new Error("Couldn't find Discord's Flux dispatcher");
 	}
-	const target = findPatchTarget("ChannelMessages");
-	if (!target) throw new Error("Couldn't find Discord's ChannelMessages component");
+	// ChatView is what Discord renders for an open channel (found with the probe);
+	// ChannelMessages is the older guess, kept as a fallback
+	let target: ReturnType<typeof findPatchTarget>;
+	let name = "";
+	for (name of TARGETS) {
+		target = findPatchTarget(name);
+		if (target) break;
+	}
+	if (!target) throw new Error(`Couldn't find any of: ${TARGETS.join(", ")}`);
 
 	const wrap = (_args: any[], ret: any) =>
 		ret == null || ret === false ? ret : React.createElement(Fade, null, ret);
@@ -71,7 +80,7 @@ const chatFade: Feature = () => {
 
 	return {
 		stop: () => stops.forEach(s => s()),
-		detail: `Hooked ChannelMessages (${describe(value)})`,
+		detail: `Hooked ${name} (${describe(value)})`,
 	};
 };
 
