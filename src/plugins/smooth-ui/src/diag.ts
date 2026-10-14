@@ -106,6 +106,7 @@ export function scanInternals(): string {
 				const v = m[k];
 				if (!v || (typeof v !== "function" && typeof v !== "object")) continue;
 				for (const name of fnNames(v)) {
+					if (/Message/.test(name) && name.length < 50) msgs.add(name);
 					if (WANTED.includes(name) && !found.has(name)) found.set(name, describe(v));
 					else if (NAV.test(name) && name.length < 40) nav.add(name);
 					else if (CHAT.test(name) && name.length < 40) chat.add(name);
