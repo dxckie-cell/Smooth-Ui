@@ -2,7 +2,6 @@ import Settings from "./components/Settings";
 import { stopCapturing } from "./diag";
 import { stopAll, sync } from "./features";
 import { startMotion } from "./motion";
-import { stopProbe } from "./probe";
 import { initConfig } from "./settings";
 
 initConfig();
@@ -17,7 +16,6 @@ export function onLoad() {
 export function onUnload() {
 	stopAll();
 	stopCapturing();
-	stopProbe();
 	stopLayout();
 }
 

@@ -7,7 +7,6 @@ import { Forms } from "@vendetta/ui/components";
 import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
-import { probeText, probing, startProbe, stopProbe } from "../probe";
 import { capturing, copyText, envInfo, eventsText, scanInternals, toggleCapture } from "../diag";
 import { type FeatureId, state, sync } from "../features";
 import { type Config, clampSpeed, config, resetConfig } from "../settings";
@@ -119,29 +118,6 @@ function Scan() {
 	);
 }
 
-function Probe() {
-	const [text, setText] = React.useState(
-		"Tap to start. Open a channel, switch channels and open a few pages, then come back and tap again. Restarting Discord turns it off",
-	);
-	return (
-		<FormRow
-			label={probing() ? "Stop probe and show results" : "Start probe"}
-			subLabel={text}
-			leading={<FormRow.Icon source={asset("MagnifyingGlassIcon")} />}
-			onPress={() => {
-				if (!probing()) {
-					const n = startProbe();
-					setText(`Watching ${n} components... use Discord now, then come back and tap again`);
-					return;
-				}
-				const out = probeText();
-				stopProbe();
-				setText(`${out}\n\n${copyText(out) ? "(copied to clipboard)" : "(couldn't copy)"}`);
-			}}
-		/>
-	);
-}
-
 function Capture() {
 	const [text, setText] = React.useState(
 		"Tap to start recording Discord's events. Switch channels, come back here and tap again to see what fired",
@@ -245,7 +221,6 @@ export default () => {
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<Scan />
 				<Capture />
-				<Probe />
 				<FormRow
 					label={
 						<Text variant="text-md/semibold" color="TEXT_FEEDBACK_CRITICAL">
