@@ -97,6 +97,7 @@ export function scanInternals(): string {
 	const found = new Map<string, string>();
 	const nav = new Set<string>();
 	const chat = new Set<string>();
+	const msgs = new Set<string>();
 	const mods = initializedExports();
 
 	for (const m of mods) {
@@ -120,6 +121,7 @@ export function scanInternals(): string {
 		...WANTED.map(n => `${n}: ${found.get(n) ?? "not found"}`),
 		`Navigation-like (${nav.size}): ${list(nav)}`,
 		`Chat-like (${chat.size}): ${list(chat)}`,
+		`Message-like (${msgs.size}): ${[...msgs].sort().join(", ") || "none"}`,
 	].join("\n");
 }
 

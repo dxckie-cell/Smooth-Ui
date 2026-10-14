@@ -21,12 +21,12 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	version: 5,
-	chatFade: false,
-	messagePop: false,
+	version: 6,
+	chatFade: true,
+	messagePop: true,
 	screens: false,
 	respectReduceMotion: true,
-	speed: 200,
+	speed: 2000,
 	// Discord uses native stacks, which only support fade
 	screenStyle: "fade",
 	debugBorder: false,
@@ -46,6 +46,8 @@ export function initConfig() {
 	}
 	// v4: Discord's pages use native stacks, where only fade works
 	if (from < 4) config.screenStyle = "fade";
+	// v6: the 2 s fade became the default speed
+	if (from < 6) config.speed = DEFAULTS.speed;
 	config.version = DEFAULTS.version;
 }
 

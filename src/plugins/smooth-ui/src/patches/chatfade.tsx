@@ -7,7 +7,6 @@ import { describe, findPatchTarget } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
-const LOADED = new Set(["LOAD_MESSAGES_SUCCESS", "LOAD_MESSAGES_SUCCESS_CACHED", "LOAD_MESSAGES_SUCCESS_JUMP"]);
 const TARGETS = ["ChatView", "ChannelMessages"];
 
 // one chat is on screen at a time, so a single shared value drives the fade
@@ -16,12 +15,10 @@ const getOpacity = () => (opacity ??= new RN.Animated.Value(1));
 
 /** Dips the chat to almost transparent, then eases it back in. */
 let lastFade = 0;
+let lastKey = "";
 export function fadeNow(from = 0.1) {
 	if (!motionAllowed()) return;
-	// the channel select and its cached messages often arrive back to back: one fade is enough
-	const now = Date.now();
-	if (from > 0.1 && now - lastFade < 150) return;
-	lastFade = now;
+	lastFade = Date.now();
 	const o = getOpacity();
 	o.stopAnimation?.();
 	o.setValue(from);
@@ -78,11 +75,14 @@ const chatFade: Feature = () => {
 		stops.push(after(key, parent, wrap));
 	}
 	stops.push(before("dispatch", FluxDispatcher as any, (args: any[]) => {
-		const type = args[0]?.type;
+		const e = args[0];
+		if (e?.type !== "CHANNEL_SELECT") return;
 		try {
-			if (type === "CHANNEL_SELECT") fadeNow();
-			// messages usually land after the channel opens; fade them in instead of popping
-			else if (LOADED.has(type)) fadeNow(0.3);
+			// Discord can dispatch the same select twice in a row; a second fade looks like a flicker
+			const key = `${e.guildId}/${e.channelId}`;
+			if (key === lastKey && Date.now() - lastFade < 1500) return;
+			lastKey = key;
+			fadeNow();
 		} catch {}
 	}));
 

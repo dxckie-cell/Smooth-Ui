@@ -7,7 +7,10 @@ import { describe, findPatchTarget } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
-const TARGET = "MessagesItemChannelContent";
+// MessagesItemChannelContent turned out to be the channel *list* row. These are guesses at the
+// real message row; a component only animates when its props carry a message id, so a wrong
+// guess is harmless.
+const TARGETS = ["ChatViewMessage", "ChatMessage", "MessageItem", "MessageRow", "MessageContainer", "Message"];
 
 /** ids / nonces of messages that just arrived and haven't animated yet */
 const fresh = new Set<string>();
@@ -64,24 +67,29 @@ const messagePop: Feature = () => {
 	if (typeof (FluxDispatcher as any)?.dispatch !== "function") {
 		throw new Error("Couldn't find Discord's Flux dispatcher");
 	}
-	const target = findPatchTarget(TARGET);
-	if (!target) throw new Error(`Couldn't find ${TARGET}`);
-
 	const stops: (() => void)[] = [];
-	const { parent, key, value } = target;
-	const wrap = function(this: any, args: any[], ret: any) {
+	const hooked: string[] = [];
+	const wrap = function(args: any[], ret: any) {
 		if (ret == null || ret === false) return ret;
 		const ids = idsOf(args[0]);
+		if (!ids.length) return ret;
 		diag.messageSample = Object.keys(args[0] ?? {}).slice(0, 12).join(",");
-		return ids.length ? React.createElement(Pop, { ids }, ret) : ret;
+		return React.createElement(Pop, { ids }, ret);
 	};
-	if (typeof value === "function" && value.prototype?.isReactComponent) {
-		stops.push(after("render", value.prototype, function(this: any, a: any[], r: any) {
-			return wrap.call(this, [this.props], r);
-		}));
-	} else {
-		stops.push(after(key, parent, wrap));
+	for (const name of TARGETS) {
+		const target = findPatchTarget(name);
+		if (!target) continue;
+		const { parent, key, value } = target;
+		hooked.push(describe(value));
+		if (typeof value === "function" && value.prototype?.isReactComponent) {
+			stops.push(after("render", value.prototype, function(this: any, _a: any[], r: any) {
+				return wrap([this.props], r);
+			}));
+		} else {
+			stops.push(after(key, parent, wrap));
+		}
 	}
+	if (!hooked.length) throw new Error(`Couldn't find any of: ${TARGETS.join(", ")}`);
 	stops.push(before("dispatch", FluxDispatcher as any, (args: any[]) => {
 		const e = args[0];
 		if (e?.type !== "MESSAGE_CREATE") return;
@@ -94,7 +102,7 @@ const messagePop: Feature = () => {
 			stops.forEach(s => s());
 			fresh.clear();
 		},
-		detail: `Hooked ${TARGET} (${describe(value)})`,
+		detail: `Hooked ${hooked.join(", ")}`,
 	};
 };
 
