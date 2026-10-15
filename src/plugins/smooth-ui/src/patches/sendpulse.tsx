@@ -20,7 +20,7 @@ const sentNonces = new Set<string>();
 function play() {
 	if (!motionAllowed()) return;
 	const now = Date.now();
-	if (now - lastPlay < 1200) return; // one pulse per send, even if Discord announces it twice
+	if (now - lastPlay < 250) return; // identical events fired together; repeats of one message are caught by nonce
 	lastPlay = now;
 	const p = getPulse();
 	p.stopAnimation?.();
