@@ -64,18 +64,34 @@ function Fade({ el, name }: { el: any; name: string }) {
 	});
 }
 
+// first of these theme colours this Discord build actually has; the cover must be opaque to be seen
+const COVER_TOKENS = [
+	"CHAT_BACKGROUND",
+	"BG_BASE_PRIMARY",
+	"BACKGROUND_PRIMARY",
+	"BACKGROUND_BASE_LOWEST",
+	"BACKGROUND_MOBILE_PRIMARY",
+	"BG_BASE_TERTIARY",
+	"BACKGROUND_SECONDARY",
+];
 let overlayStyle: any;
-const getOverlayStyle = () =>
-	(overlayStyle ??= stylesheet.createThemedStyleSheet({
+const getOverlayStyle = () => {
+	if (overlayStyle) return overlayStyle;
+	const token = COVER_TOKENS.find(t => (semanticColors as any)[t] != null);
+	diag.coverColor = token ?? "none found, using black";
+	return (overlayStyle = stylesheet.createThemedStyleSheet({
 		fill: {
 			position: "absolute",
 			top: 0,
 			left: 0,
 			right: 0,
 			bottom: 0,
-			backgroundColor: (semanticColors as any).CHAT_BACKGROUND ?? semanticColors.BACKGROUND_PRIMARY,
+			zIndex: 100,
+			elevation: 100,
+			backgroundColor: token ? (semanticColors as any)[token] : "#000000",
 		},
 	}).fill);
+};
 
 /**
  * Fallback when the chat's root can't take an opacity: a cover in the chat's background colour,
@@ -84,14 +100,20 @@ const getOverlayStyle = () =>
  */
 function Cover() {
 	diag.fadeRenders++;
-	return React.createElement(RN.Animated.View, {
+	const cover = React.createElement(RN.Animated.View, {
 		pointerEvents: "none",
-		style: [
-			getOverlayStyle(),
-			{ opacity: getOpacity().interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
-			config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" },
-		],
+		style: [getOverlayStyle(), { opacity: getOpacity().interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }],
 	});
+	if (!config.debugBorder) return cover;
+	// with the outline on, show where the cover is even while it is fully transparent
+	return React.createElement(
+		RN.View,
+		{
+			pointerEvents: "none",
+			style: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 101, borderWidth: 3, borderColor: "#ff0000" },
+		},
+		cover,
+	);
 }
 
 /** Appends the cover to the children of an element, if it has plain children to append to. */
