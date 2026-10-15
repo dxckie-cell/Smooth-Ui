@@ -20,7 +20,7 @@ const sentNonces = new Set<string>();
 function play() {
 	if (!motionAllowed()) return;
 	const now = Date.now();
-	if (now - lastPlay < 350) return; // the optimistic message and the server copy arrive back to back
+	if (now - lastPlay < 1200) return; // one pulse per send, even if Discord announces it twice
 	lastPlay = now;
 	const p = getPulse();
 	p.stopAnimation?.();
@@ -74,14 +74,16 @@ const sendPulse: Feature = () => {
 		if (e?.type !== "MESSAGE_CREATE") return;
 		try {
 			const nonce = e.message?.nonce;
-			if (e.optimistic === true) {
-				// the local copy shows up first; remember it so the server's copy doesn't pulse again
-				if (nonce) sentNonces.add(nonce);
-				if (sentNonces.size > 20) sentNonces.delete(sentNonces.values().next().value as string);
-				play();
-			} else if (me && e.message?.author?.id === me && !(nonce && sentNonces.has(nonce)) && Date.now() - lastPlay > 5000) {
-				play(); // sent from another device
+			const mine = e.optimistic === true || (me && e.message?.author?.id === me);
+			if (!mine) return;
+			// the local copy and the server's copy of one message share a nonce: pulse once per message
+			const key = nonce ?? e.message?.id;
+			if (key) {
+				if (sentNonces.has(key)) return;
+				sentNonces.add(key);
+				if (sentNonces.size > 30) sentNonces.delete(sentNonces.values().next().value as string);
 			}
+			play();
 		} catch {}
 	}));
 
