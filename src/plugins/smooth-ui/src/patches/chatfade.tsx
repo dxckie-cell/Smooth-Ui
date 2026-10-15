@@ -1,5 +1,6 @@
-import { FluxDispatcher, React, ReactNative as RN } from "@vendetta/metro/common";
+import { FluxDispatcher, React, ReactNative as RN, stylesheet } from "@vendetta/metro/common";
 import { after, before } from "@vendetta/patcher";
+import { semanticColors } from "@vendetta/ui";
 
 import { diag } from "../diag";
 import type { Feature } from "../features";
@@ -63,6 +64,46 @@ function Fade({ el, name }: { el: any; name: string }) {
 	});
 }
 
+let overlayStyle: any;
+const getOverlayStyle = () =>
+	(overlayStyle ??= stylesheet.createThemedStyleSheet({
+		fill: {
+			position: "absolute",
+			top: 0,
+			left: 0,
+			right: 0,
+			bottom: 0,
+			backgroundColor: (semanticColors as any).CHAT_BACKGROUND ?? semanticColors.BACKGROUND_PRIMARY,
+		},
+	}).fill);
+
+/**
+ * Fallback when the chat's root can't take an opacity: a cover in the chat's background colour,
+ * laid over it (absolute, so it takes no space in the layout) and faded out, which reads as the
+ * chat fading in.
+ */
+function Cover() {
+	diag.fadeRenders++;
+	return React.createElement(RN.Animated.View, {
+		pointerEvents: "none",
+		style: [
+			getOverlayStyle(),
+			{ opacity: getOpacity().interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
+			config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" },
+		],
+	});
+}
+
+/** Appends the cover to the children of an element, if it has plain children to append to. */
+function withCover(el: any) {
+	if (!React.isValidElement(el) || el.type === React.Fragment) return el;
+	const kids = (el as any).props?.children;
+	if (typeof kids === "function") return el;
+	const list = kids == null ? [] : Array.isArray(kids) ? kids : [kids];
+	diag.fadeRoot = `cover added inside ${nameOf((el as any).type) || "anonymous"} (${list.length} children)`;
+	return React.cloneElement(el as any, undefined, ...list, React.createElement(Cover, { key: "smooth-ui-cover" }));
+}
+
 /**
  * Fades Discord's chat list in when you switch channels. Uses React Native's
  * Animated (the same thing the Local Pins chips use), which works on the new
@@ -85,6 +126,7 @@ const chatFade: Feature = () => {
 	// the outer component's root gets the fade when it can; otherwise the view inside it does
 	let outerApplied = false;
 	const wrapFor = (label: string, inner: boolean) => (_args: any[], ret: any) => {
+		if (inner && !outerApplied && !viewLike(ret)) return withCover(ret);
 		if (!viewLike(ret) || (inner && outerApplied)) {
 			// say what was skipped, so the status page can show why nothing faded
 			if (!(inner && outerApplied)) {
