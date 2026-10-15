@@ -33,33 +33,58 @@ function inspect(chatRef: any): string {
 	const counts = new Map<string, number>();
 	const rowTypes = new Map<any, string>();
 	const rowParents = new Set<string>();
-	const stack: [any, number, string[]][] = [[root.child, 0, []]];
+	const deepRows = new Set<string>();
+	const listLines: string[] = [];
+	const label = (node: any) => {
+		const fn = unwrap(node.type);
+		if (typeof fn === "function") return nameOf(fn) ?? "(anon)";
+		return typeof node.type === "string" ? `<${node.type}>` : "(other)";
+	};
+	const keys = (p: any) => (p && typeof p === "object" ? Object.keys(p).slice(0, 6).join(",") : "");
+	// a message-shaped object anywhere in the first three levels of a node's props
+	const deepMsg = (v: any, d = 0): boolean => {
+		if (!v || typeof v !== "object" || d > 2) return false;
+		if (typeof v.id === "string" && (v.channel_id || v.channelId) && (v.content !== undefined || v.author || v.timestamp)) return true;
+		try {
+			for (const k of Object.keys(v).slice(0, 12)) if (deepMsg(v[k], d + 1)) return true;
+		} catch {}
+		return false;
+	};
+
+	// depth-first so the printed outline reads like the tree
 	let n = 0;
-	while (stack.length && n < MAX_NODES) {
-		const [node0, depth, path] = stack.pop()!;
-		for (let node = node0; node && n < MAX_NODES; node = node.sibling) {
+	const walk = (node: any, depth: number, path: string[], inList: boolean) => {
+		for (; node && n < MAX_NODES; node = node.sibling) {
 			n++;
 			const fn = unwrap(node.type);
-			const name = typeof fn === "function" ? nameOf(fn) : undefined;
-			if (name) {
-				counts.set(name, (counts.get(name) ?? 0) + 1);
-				try {
-					if (idsOf(node.memoizedProps).length && !rowTypes.has(fn)) {
-						rowTypes.set(fn, name);
-						rowParents.add(`${path.slice(-3).join(" > ")} > ${name}`);
-					}
-				} catch {}
+			const name = label(node);
+			if (typeof fn === "function") counts.set(name, (counts.get(name) ?? 0) + 1);
+			const listHere = inList || name === "DCDChatList";
+			try {
+				if (typeof fn === "function" && idsOf(node.memoizedProps).length && !rowTypes.has(fn)) {
+					rowTypes.set(fn, name);
+					rowParents.add(`${path.slice(-3).join(" > ")} > ${name}`);
+				} else if (typeof fn === "function" && deepMsg(node.memoizedProps) && deepRows.size < 6) {
+					deepRows.add(`${path.slice(-3).join(" > ")} > ${name}(${keys(node.memoizedProps)})`);
+				}
+			} catch {}
+			if (listHere && typeof fn === "function" && listLines.length < 45) {
+				listLines.push(`${"  ".repeat(Math.min(depth, 10))}${name} {${keys(node.memoizedProps)}}`);
 			}
-			if (node.child) stack.push([node.child, depth + 1, name ? [...path, name] : path]);
+			if (node.child) walk(node.child, depth + 1, typeof fn === "function" ? [...path, name] : path, listHere);
 		}
-	}
+	};
+	walk(root.child, 0, [], false);
 
 	const hooks = [...rowTypes].map(([fn, name]) => hookRowType(fn, name));
-	const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([k, v]) => `${k} x${v}`);
+	const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, v]) => `${k} x${v}`);
 	return [
 		`Read ${n} nodes under the chat.`,
 		`Message rows (${rowTypes.size}): ${hooks.join(", ") || "none found"}`,
 		...[...rowParents].slice(0, 6).map(p => `Path: ${p}`),
+		...[...deepRows].map(p => `Nested message in props: ${p}`),
 		`Components: ${top.join(", ")}`,
+		`Inside DCDChatList:`,
+		...(listLines.length ? listLines : ["(not found)"]),
 	].join("\n");
 }
