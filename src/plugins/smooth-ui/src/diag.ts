@@ -14,6 +14,8 @@ export const diag = {
 	fadeRenders: 0,
 	/** what the faded component returns: its type and whether it has a style */
 	fadeRoot: "not rendered yet",
+	/** component name -> what it returned when the fade skipped it (not an animatable view) */
+	fadeSkipped: {} as Record<string, string>,
 	sendPulses: 0,
 	/** route name -> "presentation/animation" Discord gave it, for native stack screens seen */
 	routes: new Map<string, string>(),
@@ -77,6 +79,7 @@ export function envInfo(): string {
 		`Screen hooks: JS stack called ${diag.jsCalls}x (changed ${diag.jsChanged} screens), native stack called ${diag.nativeCalls}x (changed ${diag.nativeChanged})`,
 		`Chat fades played: ${diag.fades}, faded ${diag.fadeRenders}x`,
 		`Fade target: ${diag.fadeRoot}`,
+		`Fade skipped: ${Object.entries(diag.fadeSkipped).map(([k, v]) => `${k} returned ${v}`).join("; ") || "nothing"}`,
 		`Send animations played: ${diag.sendPulses}`,
 		`Native routes seen (${diag.routes.size}): ${
 			[...diag.routes.entries()].slice(-20).map(([n, v]) => `${n} [${v}]`).join(", ") || "none"

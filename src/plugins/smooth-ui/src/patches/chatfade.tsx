@@ -85,7 +85,16 @@ const chatFade: Feature = () => {
 	// the outer component's root gets the fade when it can; otherwise the view inside it does
 	let outerApplied = false;
 	const wrapFor = (label: string, inner: boolean) => (_args: any[], ret: any) => {
-		if (!viewLike(ret) || (inner && outerApplied)) return ret;
+		if (!viewLike(ret) || (inner && outerApplied)) {
+			// say what was skipped, so the status page can show why nothing faded
+			if (!(inner && outerApplied)) {
+				const t = ret?.type;
+				diag.fadeSkipped[label] = React.isValidElement(ret)
+					? `${nameOf(t) || nameOf(t?.type) || nameOf(t?.render) || (typeof t === "string" ? `<${t}>` : "anonymous")}, style ${ret.props?.style !== undefined ? "yes" : "no"}`
+					: ret == null ? "null" : Array.isArray(ret) ? "array" : typeof ret;
+			}
+			return ret;
+		}
 		if (!inner) outerApplied = true;
 		return React.createElement(Fade, { el: ret, name: label });
 	};
