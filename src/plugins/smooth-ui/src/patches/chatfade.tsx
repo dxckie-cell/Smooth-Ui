@@ -26,23 +26,35 @@ export function fadeNow(from = 0.1) {
 		toValue: 1,
 		duration: clampSpeed(config.speed) + 100,
 		easing: RN.Easing.out(RN.Easing.cubic),
-		useNativeDriver: true,
+		useNativeDriver: false, // the opacity is applied through state, see Fade
 	}).start();
 	diag.fades++;
 }
 
-function Fade({ children }: { children?: any }) {
+/**
+ * Fades the chat by merging an opacity into the style of the element ChatView returns. An extra
+ * wrapper view around the chat broke Discord's keyboard handling (gap above the keyboard, content
+ * jumping), so nothing is added to the layout. The opacity is driven from JS and applied through
+ * state: the wrapper re-renders each frame, but the chat's own children are the same elements and
+ * React skips them.
+ */
+function Fade({ el }: { el: any }) {
 	diag.fadeRenders++;
-	return (
-		<RN.Animated.View
-			style={[
-				{ flex: 1, opacity: getOpacity() },
-				config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" },
-			]}
-		>
-			{children}
-		</RN.Animated.View>
-	);
+	const o = getOpacity();
+	const [v, setV] = React.useState<number>((o as any).__getValue?.() ?? 1);
+	React.useEffect(() => {
+		const id = o.addListener(({ value }: { value: number }) => setV(value));
+		return () => o.removeListener(id);
+	}, []);
+
+	const extra = [v < 1 && { opacity: v }, config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" }]
+		.filter(Boolean);
+	if (!extra.length) return el;
+	const base = el.props?.style;
+	const merged = Object.assign({}, ...extra);
+	return React.cloneElement(el, {
+		style: Array.isArray(base) ? [...base, merged] : base ? [base, merged] : merged,
+	});
 }
 
 /**
@@ -65,7 +77,7 @@ const chatFade: Feature = () => {
 	if (!target) throw new Error(`Couldn't find any of: ${TARGETS.join(", ")}`);
 
 	const wrap = (_args: any[], ret: any) =>
-		ret == null || ret === false ? ret : React.createElement(Fade, null, ret);
+		React.isValidElement(ret) && ret.type !== React.Fragment ? React.createElement(Fade, { el: ret }) : ret;
 
 	const stops: (() => void)[] = [];
 	const { parent, key, value } = target;
