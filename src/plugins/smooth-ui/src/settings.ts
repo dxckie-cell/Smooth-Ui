@@ -21,9 +21,9 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	version: 7,
+	version: 8,
 	chatFade: true,
-	sendPulse: true,
+	sendPulse: false,
 	screens: false,
 	respectReduceMotion: true,
 	speed: 2000,
@@ -50,6 +50,8 @@ export function initConfig() {
 	if (from < 6) config.speed = DEFAULTS.speed;
 	// v7: the new-message animation was dropped (Discord draws messages where plugins can't reach)
 	if (from < 7) delete (config as any).messagePop;
+	// v8: the send animation crashed Discord for one user; it is off until it is sorted out
+	if (from < 8) config.sendPulse = false;
 	config.version = DEFAULTS.version;
 }
 

@@ -168,7 +168,7 @@ export default () => {
 				/>
 				<SwitchRow
 					label="Send animation"
-					sub="The message bar squeezes and flashes when you send a message. Lasts at most 0.7 s"
+					sub="Experimental, crashed Discord in testing. The message bar squeezes and flashes when you send a message"
 					icon="ChatIcon"
 					value={config.sendPulse}
 					onChange={v => set("sendPulse", v)}
