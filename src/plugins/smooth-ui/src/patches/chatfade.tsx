@@ -3,11 +3,13 @@ import { after, before } from "@vendetta/patcher";
 
 import { diag } from "../diag";
 import type { Feature } from "../features";
-import { describe, findPatchTarget } from "../find";
+import { describe, findPatchTarget, nameOf } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
+// ChatViewWrapperBase is the view inside ChatView; ChatView itself may return a non-view root
 const TARGETS = ["ChatView", "ChannelMessages"];
+const INNER = "ChatViewWrapperBase";
 
 // one chat is on screen at a time, so a single shared value drives the fade
 let opacity: any;
@@ -26,34 +28,38 @@ export function fadeNow(from = 0.1) {
 		toValue: 1,
 		duration: clampSpeed(config.speed) + 100,
 		easing: RN.Easing.out(RN.Easing.cubic),
-		useNativeDriver: false, // the opacity is applied through state, see Fade
+		useNativeDriver: true,
 	}).start();
 	diag.fades++;
 }
 
-/**
- * Fades the chat by merging an opacity into the style of the element ChatView returns. An extra
- * wrapper view around the chat broke Discord's keyboard handling (gap above the keyboard, content
- * jumping), so nothing is added to the layout. The opacity is driven from JS and applied through
- * state: the wrapper re-renders each frame, but the chat's own children are the same elements and
- * React skips them.
- */
-function Fade({ el }: { el: any }) {
-	diag.fadeRenders++;
-	const o = getOpacity();
-	const [v, setV] = React.useState((o as any).__getValue?.() ?? 1);
-	React.useEffect(() => {
-		const id = o.addListener(({ value }: { value: number }) => setV(value));
-		return () => o.removeListener(id);
-	}, []);
+const animatedCache = new Map<any, any>();
+const animatedOf = (type: any) => {
+	let a = animatedCache.get(type);
+	if (!a) animatedCache.set(type, a = RN.Animated.createAnimatedComponent(type));
+	return a;
+};
 
-	const extra = [v < 1 && { opacity: v }, config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" }]
-		.filter(Boolean);
-	if (!extra.length) return el;
-	const base = el.props?.style;
-	const merged = Object.assign({}, ...extra);
-	return React.cloneElement(el, {
-		style: Array.isArray(base) ? [...base, merged] : base ? [base, merged] : merged,
+/** Can this element take an animated opacity? (an RN view, or something that already takes a style) */
+const viewLike = (el: any) =>
+	React.isValidElement(el) && el.type !== React.Fragment && typeof el.type !== "string"
+	&& (el.type === RN.View || (el as any).props?.style !== undefined);
+
+/**
+ * Fades the chat by animating the opacity of the element ChatView returns, turned into an animated
+ * version of itself with the same props. An extra wrapper view around the chat broke Discord's
+ * keyboard handling (gap above the keyboard, content jumping), so nothing is added to the layout.
+ */
+function Fade({ el, name }: { el: any; name: string }) {
+	diag.fadeRenders++;
+	const type = (el as any).type;
+	const style = (el as any).props?.style;
+	diag.fadeRoot = `${name} returns ${nameOf(type) || nameOf(type?.type) || nameOf(type?.render) || (typeof type === "object" ? "object" : "anonymous")}, style ${style !== undefined ? "yes" : "no"}`;
+	const A = animatedOf(type);
+	return React.createElement(A, {
+		...(el as any).props,
+		ref: (el as any).ref,
+		style: [style, { opacity: getOpacity() }, config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" }],
 	});
 }
 
@@ -76,16 +82,27 @@ const chatFade: Feature = () => {
 	}
 	if (!target) throw new Error(`Couldn't find any of: ${TARGETS.join(", ")}`);
 
-	const wrap = (_args: any[], ret: any) =>
-		React.isValidElement(ret) && ret.type !== React.Fragment ? React.createElement(Fade, { el: ret }) : ret;
+	// the outer component's root gets the fade when it can; otherwise the view inside it does
+	let outerApplied = false;
+	const wrapFor = (label: string, inner: boolean) => (_args: any[], ret: any) => {
+		if (!viewLike(ret) || (inner && outerApplied)) return ret;
+		if (!inner) outerApplied = true;
+		return React.createElement(Fade, { el: ret, name: label });
+	};
 
 	const stops: (() => void)[] = [];
-	const { parent, key, value } = target;
-	if (typeof value === "function" && value.prototype?.isReactComponent) {
-		stops.push(after("render", value.prototype, wrap));
-	} else {
-		stops.push(after(key, parent, wrap));
-	}
+	const hook = (t: NonNullable<typeof target>, label: string, inner: boolean) => {
+		const wrap = wrapFor(label, inner);
+		if (typeof t.value === "function" && t.value.prototype?.isReactComponent) {
+			stops.push(after("render", t.value.prototype, wrap));
+		} else {
+			stops.push(after(t.key, t.parent, wrap));
+		}
+	};
+	const { value } = target;
+	hook(target, name, false);
+	const innerTarget = findPatchTarget(INNER);
+	if (innerTarget) hook(innerTarget, INNER, true);
 	stops.push(before("dispatch", FluxDispatcher as any, (args: any[]) => {
 		const e = args[0];
 		if (e?.type !== "CHANNEL_SELECT") return;
@@ -100,7 +117,7 @@ const chatFade: Feature = () => {
 
 	return {
 		stop: () => stops.forEach(s => s()),
-		detail: `Hooked ${name} (${describe(value)})`,
+		detail: `Hooked ${name} (${describe(value)})${innerTarget ? `, ${INNER}` : ""}`,
 	};
 };
 
