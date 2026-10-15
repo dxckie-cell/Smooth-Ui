@@ -42,6 +42,7 @@ function Fade({ children }: { children?: any }) {
 	// once the chat is up, look for its message rows (the rows' names aren't known in advance);
 	// messages load a moment after the chat opens, so retry a few times
 	React.useEffect(() => {
+		diag.refState = chatRef ? "set at mount" : "empty at mount";
 		if (!config.messagePop) return;
 		const timers = [1500, 4000, 9000].map(ms =>
 			setTimeout(() => {

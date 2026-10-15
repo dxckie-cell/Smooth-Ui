@@ -21,6 +21,8 @@ export function inspectChat(ref: any): string {
 }
 
 function inspect(chatRef: any): string {
+	diag.inspectRuns++;
+	diag.refState = !chatRef ? "empty" : startFiber(chatRef) ? "ok" : `no fiber (keys: ${Object.keys(chatRef).slice(0, 10).join(",")})`;
 	const root = startFiber(chatRef);
 	if (!root) {
 		return chatRef
