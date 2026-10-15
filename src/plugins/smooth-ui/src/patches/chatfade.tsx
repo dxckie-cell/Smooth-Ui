@@ -41,7 +41,7 @@ export function fadeNow(from = 0.1) {
 function Fade({ el }: { el: any }) {
 	diag.fadeRenders++;
 	const o = getOpacity();
-	const [v, setV] = React.useState<number>((o as any).__getValue?.() ?? 1);
+	const [v, setV] = React.useState((o as any).__getValue?.() ?? 1);
 	React.useEffect(() => {
 		const id = o.addListener(({ value }: { value: number }) => setV(value));
 		return () => o.removeListener(id);
