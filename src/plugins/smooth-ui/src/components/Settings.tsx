@@ -7,9 +7,7 @@ import { Forms } from "@vendetta/ui/components";
 import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
-import { capturing, copyText, diag, envInfo, eventsText, scanInternals, toggleCapture } from "../diag";
-import { inspectChat } from "../inspect";
-import { chatRef } from "../patches/chatfade";
+import { capturing, copyText, envInfo, eventsText, scanInternals, toggleCapture } from "../diag";
 import { type FeatureId, state, sync } from "../features";
 import { type Config, clampSpeed, config, resetConfig } from "../settings";
 
@@ -121,27 +119,6 @@ function Scan() {
 	);
 }
 
-function Inspect() {
-	const [text, setText] = React.useState(
-		diag.inspectText || "Runs by itself a few seconds after a chat opens. Tap to see the result or run it again",
-	);
-	return (
-		<FormRow
-			label="Inspect chat (find message rows)"
-			subLabel={text}
-			leading={<FormRow.Icon source={asset("MagnifyingGlassIcon")} />}
-			onPress={() => {
-				try {
-					const out = inspectChat(chatRef);
-					setText(`${out}\n\n${copyText(out) ? "(copied to clipboard)" : "(couldn't copy)"}`);
-				} catch (e: any) {
-					setText(`Inspect failed: ${e?.message ?? e}`);
-				}
-			}}
-		/>
-	);
-}
-
 function Capture() {
 	const [text, setText] = React.useState(
 		"Tap to start recording Discord's events. Switch channels, come back here and tap again to see what fired",
@@ -190,11 +167,11 @@ export default () => {
 					onChange={v => set("chatFade", v)}
 				/>
 				<SwitchRow
-					label="New message animation"
-					sub="Messages you send or receive ease in (slide up and fade) instead of popping in. Lasts at most 0.6 s"
+					label="Send animation"
+					sub="The message bar squeezes and flashes when you send a message. Lasts at most 0.7 s"
 					icon="ChatIcon"
-					value={config.messagePop}
-					onChange={v => set("messagePop", v)}
+					value={config.sendPulse}
+					onChange={v => set("sendPulse", v)}
 				/>
 				<FormRow
 					label="Speed"
@@ -248,11 +225,10 @@ export default () => {
 
 			<BetterTableRowGroup title="Status" icon={asset("InfoIcon")}>
 				<FormRow label="Channel fade" subLabel={statusText("chatFade")} />
-				<FormRow label="New message animation" subLabel={statusText("messagePop")} />
+				<FormRow label="Send animation" subLabel={statusText("sendPulse")} />
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<Scan />
-				<Inspect />
 				<Capture />
 				<FormRow
 					label={

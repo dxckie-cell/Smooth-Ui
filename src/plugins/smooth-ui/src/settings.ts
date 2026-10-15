@@ -7,8 +7,8 @@ export interface Config {
 	version: number;
 	/** fade the chat in when you switch channels */
 	chatFade: boolean;
-	/** new messages ease in instead of popping in */
-	messagePop: boolean;
+	/** the input bar squeezes and flashes when you send a message */
+	sendPulse: boolean;
 	/** experimental: override Discord's screen push/pop animation */
 	screens: boolean;
 	/** skip animations when the system "reduce motion" setting is on */
@@ -21,9 +21,9 @@ export interface Config {
 }
 
 export const DEFAULTS: Config = {
-	version: 6,
+	version: 7,
 	chatFade: true,
-	messagePop: true,
+	sendPulse: true,
 	screens: false,
 	respectReduceMotion: true,
 	speed: 2000,
@@ -48,6 +48,8 @@ export function initConfig() {
 	if (from < 4) config.screenStyle = "fade";
 	// v6: the 2 s fade became the default speed
 	if (from < 6) config.speed = DEFAULTS.speed;
+	// v7: the new-message animation was dropped (Discord draws messages where plugins can't reach)
+	if (from < 7) delete (config as any).messagePop;
 	config.version = DEFAULTS.version;
 }
 
