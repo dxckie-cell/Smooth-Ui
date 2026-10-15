@@ -20,16 +20,7 @@ export function inspectChat(ref: any): string {
 	return diag.inspectText;
 }
 
-function inspect(chatRef: any): string {
-	diag.inspectRuns++;
-	diag.refState = !chatRef ? "empty" : startFiber(chatRef) ? "ok" : `no fiber (keys: ${Object.keys(chatRef).slice(0, 10).join(",")})`;
-	const root = startFiber(chatRef);
-	if (!root) {
-		return chatRef
-			? `Found the chat view but not its React fiber (keys: ${Object.keys(chatRef).slice(0, 12).join(",")})`
-			: "The chat isn't on screen right now. Open a channel; the plugin looks for message rows by itself a few seconds after a chat opens";
-	}
-
+function scanTree(rootFiber: any) {
 	const counts = new Map<string, number>();
 	const rowTypes = new Map<any, string>();
 	const rowParents = new Set<string>();
@@ -37,7 +28,7 @@ function inspect(chatRef: any): string {
 	const listLines: string[] = [];
 	const label = (node: any) => {
 		const fn = unwrap(node.type);
-		if (typeof fn === "function") return nameOf(fn) ?? "(anon)";
+		if (typeof fn === "function") return nameOf(fn) || "(anon)";
 		return typeof node.type === "string" ? `<${node.type}>` : "(other)";
 	};
 	const keys = (p: any) => (p && typeof p === "object" ? Object.keys(p).slice(0, 6).join(",") : "");
@@ -74,12 +65,36 @@ function inspect(chatRef: any): string {
 			if (node.child) walk(node.child, depth + 1, typeof fn === "function" ? [...path, name] : path, listHere);
 		}
 	};
-	walk(root.child, 0, [], false);
 
+	walk(rootFiber.child, 0, [], false);
+	return { n, counts, rowTypes, rowParents, deepRows, listLines };
+}
+
+function inspect(chatRef: any): string {
+	diag.inspectRuns++;
+	diag.refState = !chatRef ? "empty" : startFiber(chatRef) ? "ok" : `no fiber (keys: ${Object.keys(chatRef).slice(0, 10).join(",")})`;
+	const root = startFiber(chatRef);
+	if (!root) {
+		return chatRef
+			? `Found the chat view but not its React fiber (keys: ${Object.keys(chatRef).slice(0, 12).join(",")})`
+			: "The chat isn't on screen right now. Open a channel; the plugin looks for message rows by itself a few seconds after a chat opens";
+	}
+
+	// the handle can point at the previous ("alternate") copy of a fiber, which still shows the
+	// tree from before messages loaded; scan both copies and keep the bigger tree
+	const candidates = [root, root.alternate].filter(Boolean);
+	let best: ReturnType<typeof scanTree> | undefined;
+	const sizes: number[] = [];
+	for (const c of candidates) {
+		const r = scanTree(c);
+		sizes.push(r.n);
+		if (!best || r.n > best.n) best = r;
+	}
+	const { n, counts, rowTypes, rowParents, deepRows, listLines } = best!;
 	const hooks = [...rowTypes].map(([fn, name]) => hookRowType(fn, name));
 	const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25).map(([k, v]) => `${k} x${v}`);
 	return [
-		`Read ${n} nodes under the chat.`,
+		`Read ${n} nodes under the chat (fiber copies: ${sizes.join(" / ")}).`,
 		`Message rows (${rowTypes.size}): ${hooks.join(", ") || "none found"}`,
 		...[...rowParents].slice(0, 6).map(p => `Path: ${p}`),
 		...[...deepRows].map(p => `Nested message in props: ${p}`),
