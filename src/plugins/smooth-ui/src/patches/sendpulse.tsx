@@ -15,6 +15,7 @@ const TARGET = "ChatInputGuardWrapper";
 let pulse: any;
 const getPulse = () => (pulse ??= new RN.Animated.Value(0));
 let lastPlay = 0;
+const sentNonces = new Set<string>();
 
 function play() {
 	if (!motionAllowed()) return;
@@ -63,6 +64,7 @@ const sendPulse: Feature = () => {
 		stops.push(after(key, parent, wrap));
 	}
 
+	sentNonces.clear();
 	let me: string | undefined;
 	try {
 		me = (findByStoreName("UserStore") as any)?.getCurrentUser?.()?.id;
@@ -71,8 +73,15 @@ const sendPulse: Feature = () => {
 		const e = args[0];
 		if (e?.type !== "MESSAGE_CREATE") return;
 		try {
-			const mine = e.optimistic === true || (me && e.message?.author?.id === me);
-			if (mine) play();
+			const nonce = e.message?.nonce;
+			if (e.optimistic === true) {
+				// the local copy shows up first; remember it so the server's copy doesn't pulse again
+				if (nonce) sentNonces.add(nonce);
+				if (sentNonces.size > 20) sentNonces.delete(sentNonces.values().next().value as string);
+				play();
+			} else if (me && e.message?.author?.id === me && !(nonce && sentNonces.has(nonce)) && Date.now() - lastPlay > 5000) {
+				play(); // sent from another device
+			}
 		} catch {}
 	}));
 
