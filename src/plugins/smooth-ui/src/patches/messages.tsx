@@ -75,11 +75,15 @@ function Pop({ children, ids }: { children?: any; ids: string[] }) {
 }
 
 const extra: (() => void)[] = [];
+const hookedFns = new WeakSet<object>();
 let messagePopOn = false;
 
 /** Hooks a row component the inspector found in the live React tree (by function identity). */
 export function hookRowType(fn: any, name: string): string {
-	if (!messagePopOn) return "turn on New message animation first";
+	if (!messagePopOn) return `${name}: New message animation is off`;
+	if (hookedFns.has(fn)) return `${name}: already hooked`;
+	hookedFns.add(fn);
+	diag.rowsFound++;
 	const at = findParentOf(fn);
 	if (!at) return `${name}: not an export, can't hook`;
 	const [parent, key] = at;

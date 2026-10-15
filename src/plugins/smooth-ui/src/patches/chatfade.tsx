@@ -4,6 +4,7 @@ import { after, before } from "@vendetta/patcher";
 import { diag } from "../diag";
 import type { Feature } from "../features";
 import { describe, findPatchTarget } from "../find";
+import { inspectChat } from "../inspect";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
@@ -38,6 +39,19 @@ export function fadeNow(from = 0.1) {
 
 function Fade({ children }: { children?: any }) {
 	diag.fadeRenders++;
+	// once the chat is up, look for its message rows (the rows' names aren't known in advance);
+	// messages load a moment after the chat opens, so retry a few times
+	React.useEffect(() => {
+		if (!config.messagePop) return;
+		const timers = [1500, 4000, 9000].map(ms =>
+			setTimeout(() => {
+				try {
+					if (!/Message rows \([1-9]/.test(diag.inspectText)) inspectChat(chatRef);
+				} catch {}
+			}, ms)
+		);
+		return () => timers.forEach(clearTimeout);
+	}, []);
 	return (
 		<RN.Animated.View
 			ref={setChatRef}

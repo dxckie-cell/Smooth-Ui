@@ -1,25 +1,31 @@
 import { nameOf } from "./find";
-import { chatRef } from "./patches/chatfade";
+import { diag } from "./diag";
 import { hookRowType, idsOf } from "./patches/messages";
 
 const MAX_NODES = 6000;
 
 const unwrap = (t: any): any => (typeof t === "function" ? t : t?.type ?? t?.render);
 
-function startFiber(): any {
-	const r: any = chatRef;
+function startFiber(r: any): any {
 	if (!r) return undefined;
 	return r.__internalInstanceHandle ?? r._internalInstanceHandle ?? r.canonical?.internalInstanceHandle
 		?? r._internalFiberInstanceHandleDEV;
 }
 
 /** Reads (never changes) the React tree under the chat view and hooks the message row components it finds. */
-export function inspectChat(): string {
-	const root = startFiber();
+export function inspectChat(ref: any): string {
+	const out = inspect(ref);
+	// keep an earlier good result when the chat has since been closed
+	if (!out.startsWith("The chat isn't") || !diag.inspectText) diag.inspectText = out;
+	return diag.inspectText;
+}
+
+function inspect(chatRef: any): string {
+	const root = startFiber(chatRef);
 	if (!root) {
 		return chatRef
 			? `Found the chat view but not its React fiber (keys: ${Object.keys(chatRef).slice(0, 12).join(",")})`
-			: "The chat isn't on screen. Turn on Channel fade, open a channel, then come back here and tap again";
+			: "The chat isn't on screen right now. Open a channel; the plugin looks for message rows by itself a few seconds after a chat opens";
 	}
 
 	const counts = new Map<string, number>();

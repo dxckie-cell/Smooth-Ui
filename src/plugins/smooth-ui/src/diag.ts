@@ -14,6 +14,10 @@ export const diag = {
 	fadeRenders: 0,
 	messagePops: 0,
 	messageSample: "",
+	/** last result of the chat inspector */
+	inspectText: "",
+	/** message row components the inspector hooked */
+	rowsFound: 0,
 	/** route name -> "presentation/animation" Discord gave it, for native stack screens seen */
 	routes: new Map<string, string>(),
 	/** Flux event type -> count, most recent last (only filled while capturing) */
