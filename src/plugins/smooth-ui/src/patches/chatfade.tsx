@@ -55,13 +55,15 @@ function Fade({ children }: { children?: any }) {
 	}, []);
 	return (
 		<RN.Animated.View
-			ref={setChatRef}
 			style={[
 				{ flex: 1, opacity: getOpacity() },
 				config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" },
 			]}
 		>
-			{children}
+			{/* a plain view inside, only so the inspector has something to read the React tree from */}
+			<RN.View ref={setChatRef} collapsable={false} style={{ flex: 1 }}>
+				{children}
+			</RN.View>
 		</RN.Animated.View>
 	);
 }
