@@ -54,14 +54,6 @@ function scan<T>(pick: (value: any, key: string, mod: any) => T | undefined): T 
 	return hit;
 }
 
-/** Finds a function / class by name among every module's exports (plain, memo or forwardRef). */
-export function findByFnName(wanted: string): any {
-	return scan(v => {
-		if (nameOf(v) === wanted) return v;
-		if (v && typeof v === "object" && nameOf(v.type) === wanted) return v.type;
-	});
-}
-
 /** Where a named component lives, so it can be patched in place (plain, class, memo or forwardRef). */
 export function findPatchTarget(
 	wanted: string,
@@ -75,28 +67,4 @@ export function findPatchTarget(
 			}
 		},
 	);
-}
-
-/** [exportsObject, key] holding `fn`, so it can be patched in place. */
-export function findParentOf(fn: any): [any, string] | undefined {
-	return scan((v, k, m) => {
-		if (v === fn) return [m, k] as [any, string];
-		if (v && typeof v === "object") {
-			if (v.type === fn) return [v, "type"] as [any, string];
-			if (v.render === fn) return [v, "render"] as [any, string];
-		}
-	});
-}
-
-/** Short description of a value's shape, for the status page. */
-export function describe(v: any): string {
-	if (v === undefined || v === null) return String(v);
-	if (typeof v === "function") {
-		return `${v.prototype?.isReactComponent ? "class" : "function"} ${nameOf(v) || "anonymous"}`;
-	}
-	if (typeof v === "object") {
-		const keys = Object.keys(v).slice(0, 5).join(",");
-		return `object{${keys}${v.type ? `; type=${describe(v.type)}` : ""}}`;
-	}
-	return typeof v;
 }

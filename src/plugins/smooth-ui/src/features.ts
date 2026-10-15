@@ -1,12 +1,11 @@
 import chatFade from "./patches/chatfade";
 import sendPulse from "./patches/sendpulse";
-import screens from "./patches/screens";
 import { config } from "./settings";
 
 /** Starts a feature. Throws if Discord's internals aren't what it expects. */
 export type Feature = () => { stop: () => void; detail?: string };
 
-export type FeatureId = "chatFade" | "sendPulse" | "screens";
+export type FeatureId = "chatFade" | "sendPulse";
 
 export interface FeatureState {
 	on: boolean;
@@ -14,12 +13,11 @@ export interface FeatureState {
 	detail?: string;
 }
 
-const FEATURES: Record<FeatureId, Feature> = { chatFade, sendPulse, screens };
+const FEATURES: Record<FeatureId, Feature> = { chatFade, sendPulse };
 
 export const state: Record<FeatureId, FeatureState> = {
 	chatFade: { on: false },
 	sendPulse: { on: false },
-	screens: { on: false },
 };
 
 const active: Partial<Record<FeatureId, () => void>> = {};

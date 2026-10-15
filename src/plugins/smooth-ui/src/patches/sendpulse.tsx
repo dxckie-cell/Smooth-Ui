@@ -2,9 +2,8 @@ import { FluxDispatcher, React, ReactNative as RN } from "@vendetta/metro/common
 import { findByStoreName } from "@vendetta/metro";
 import { after, before } from "@vendetta/patcher";
 
-import { diag } from "../diag";
 import type { Feature } from "../features";
-import { describe, findPatchTarget } from "../find";
+import { findPatchTarget } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
@@ -31,7 +30,6 @@ function play() {
 		easing: RN.Easing.out(RN.Easing.cubic),
 		useNativeDriver: true,
 	}).start();
-	diag.sendPulses++;
 }
 
 function Pulse({ children }: { children?: any }) {
@@ -87,7 +85,7 @@ const sendPulse: Feature = () => {
 		} catch {}
 	}));
 
-	return { stop: () => stops.forEach(s => s()), detail: `Hooked ${TARGET} (${describe(value)})` };
+	return { stop: () => stops.forEach(s => s()), detail: undefined };
 };
 
 export default sendPulse;

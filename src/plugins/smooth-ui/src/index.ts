@@ -1,5 +1,4 @@
 import Settings from "./components/Settings";
-import { stopCapturing } from "./diag";
 import { stopAll, sync } from "./features";
 import { startMotion } from "./motion";
 import { initConfig } from "./settings";
@@ -15,7 +14,6 @@ export function onLoad() {
 
 export function onUnload() {
 	stopAll();
-	stopCapturing();
 	stopLayout();
 }
 
