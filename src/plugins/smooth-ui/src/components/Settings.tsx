@@ -8,6 +8,7 @@ import { BetterTableRowGroup } from "$/components/BetterTableRow";
 import Text from "$/components/Text";
 
 import { capturing, copyText, envInfo, eventsText, scanInternals, toggleCapture } from "../diag";
+import { inspectChat } from "../inspect";
 import { type FeatureId, state, sync } from "../features";
 import { type Config, clampSpeed, config, resetConfig } from "../settings";
 
@@ -114,6 +115,27 @@ function Scan() {
 						setText(`Scan failed: ${e?.message ?? e}`);
 					}
 				}, 100);
+			}}
+		/>
+	);
+}
+
+function Inspect() {
+	const [text, setText] = React.useState(
+		"Open a channel first, then come back and tap. Finds the chat's message rows so the new-message animation can use them",
+	);
+	return (
+		<FormRow
+			label="Inspect chat (find message rows)"
+			subLabel={text}
+			leading={<FormRow.Icon source={asset("MagnifyingGlassIcon")} />}
+			onPress={() => {
+				try {
+					const out = inspectChat();
+					setText(`${out}\n\n${copyText(out) ? "(copied to clipboard)" : "(couldn't copy)"}`);
+				} catch (e: any) {
+					setText(`Inspect failed: ${e?.message ?? e}`);
+				}
 			}}
 		/>
 	);
@@ -229,6 +251,7 @@ export default () => {
 				<FormRow label="Screen transitions" subLabel={statusText("screens")} />
 				<FormRow label="Diagnostics" subLabel={envInfo()} />
 				<Scan />
+				<Inspect />
 				<Capture />
 				<FormRow
 					label={

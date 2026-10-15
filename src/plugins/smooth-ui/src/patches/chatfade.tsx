@@ -10,6 +10,11 @@ import { clampSpeed, config } from "../settings";
 const TARGETS = ["ChatView", "ChannelMessages"];
 
 // one chat is on screen at a time, so a single shared value drives the fade
+/** the on-screen chat view, so the inspector can read the React tree under it */
+export let chatRef: any = null;
+export const setChatRef = (r: any) => {
+	chatRef = r;
+};
 let opacity: any;
 const getOpacity = () => (opacity ??= new RN.Animated.Value(1));
 
@@ -35,6 +40,7 @@ function Fade({ children }: { children?: any }) {
 	diag.fadeRenders++;
 	return (
 		<RN.Animated.View
+			ref={setChatRef}
 			style={[
 				{ flex: 1, opacity: getOpacity() },
 				config.debugBorder && { borderWidth: 3, borderColor: "#ff0000" },

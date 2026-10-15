@@ -79,7 +79,13 @@ export function findPatchTarget(
 
 /** [exportsObject, key] holding `fn`, so it can be patched in place. */
 export function findParentOf(fn: any): [any, string] | undefined {
-	return scan((v, k, m) => (v === fn ? ([m, k] as [any, string]) : undefined));
+	return scan((v, k, m) => {
+		if (v === fn) return [m, k] as [any, string];
+		if (v && typeof v === "object") {
+			if (v.type === fn) return [v, "type"] as [any, string];
+			if (v.render === fn) return [v, "render"] as [any, string];
+		}
+	});
 }
 
 /** Short description of a value's shape, for the status page. */

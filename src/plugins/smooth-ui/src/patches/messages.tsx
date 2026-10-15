@@ -3,7 +3,7 @@ import { after, before } from "@vendetta/patcher";
 
 import { diag } from "../diag";
 import type { Feature } from "../features";
-import { describe, findPatchTarget } from "../find";
+import { describe, findParentOf, findPatchTarget } from "../find";
 import { motionAllowed } from "../motion";
 import { clampSpeed, config } from "../settings";
 
@@ -20,7 +20,7 @@ const remember = (id: unknown) => {
 };
 
 /** The message id behind a list row: looks for a message-shaped object in the props (two levels). */
-function idsOf(props: any): string[] {
+export function idsOf(props: any): string[] {
 	const out: string[] = [];
 	const take = (m: any) => {
 		if (m && typeof m === "object" && typeof m.id === "string" && (m.channel_id || m.channelId || m.author)) {
@@ -74,11 +74,32 @@ function Pop({ children, ids }: { children?: any; ids: string[] }) {
 	);
 }
 
+const extra: (() => void)[] = [];
+let messagePopOn = false;
+
+/** Hooks a row component the inspector found in the live React tree (by function identity). */
+export function hookRowType(fn: any, name: string): string {
+	if (!messagePopOn) return "turn on New message animation first";
+	const at = findParentOf(fn);
+	if (!at) return `${name}: not an export, can't hook`;
+	const [parent, key] = at;
+	const sampled = new Set<string>();
+	extra.push(after(key, parent, (args: any[], ret: any) => {
+		if (ret == null || ret === false) return ret;
+		const ids = idsOf(args[0]);
+		diag.messageSample += sampled.has(name) ? "" : `${name}(${ids.length ? "msg" : "no msg"}) `;
+		sampled.add(name);
+		return ids.length ? React.createElement(Pop, { ids }, ret) : ret;
+	}));
+	return `${name}: hooked`;
+}
+
 /** New messages (yours and other people's) ease in, Messenger-style, instead of popping in. */
 const messagePop: Feature = () => {
 	if (typeof (FluxDispatcher as any)?.dispatch !== "function") {
 		throw new Error("Couldn't find Discord's Flux dispatcher");
 	}
+	messagePopOn = true;
 	const stops: (() => void)[] = [];
 	const hooked: string[] = [];
 	const sampled = new Set<string>();
@@ -105,7 +126,6 @@ const messagePop: Feature = () => {
 			stops.push(after(key, parent, mk(name)));
 		}
 	}
-	if (!hooked.length) throw new Error(`Couldn't find any of: ${TARGETS.join(", ")}`);
 	stops.push(before("dispatch", FluxDispatcher as any, (args: any[]) => {
 		const e = args[0];
 		if (e?.type !== "MESSAGE_CREATE") return;
@@ -115,10 +135,12 @@ const messagePop: Feature = () => {
 
 	return {
 		stop: () => {
+			messagePopOn = false;
 			stops.forEach(s => s());
+			extra.splice(0).forEach(s => s());
 			fresh.clear();
 		},
-		detail: `Hooked ${hooked.join(", ")}`,
+		detail: hooked.length ? `Hooked ${hooked.join(", ")}` : "No known message row yet. Open a channel, then tap Inspect chat below",
 	};
 };
 
